@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>Böngésző API Teszt: TTS, Vágólap, Beszédfelismerés</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #status-tts, #status-clipboard-write, #status-clipboard-read, #status-speech-rec {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #e2e3e5;
+            color: #495057;
+            border: 1px solid #d6d8db;
+        }
+        .test-section {
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px dashed #ccc;
+        }
+        textarea {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ Böngésző API Teszt</h1>
+        
+        <div class="test-section">
+            <h2>1. Szövegfelolvasás (TTS) Teszt</h2>
+            <p>A teszt megpróbálja felolvasni a **"Helló world"** szöveget (Web Speech API).</p>
+            <button id="speakButton">Kezd a Felolvasást</button>
+            <div id="status-tts" class="info">Nyomja meg a gombot a TTS teszt indításához...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. Vágólap Teszt (Clipboard API)</h2>
+            <h3>2.1. Vágólapra Írás</h3>
+            <p>A következő szöveget írjuk a vágólapra: <code id="clipboardText">A Vágólap teszt sikeres.</code></p>
+            <button id="writeButton">Szöveg Másolása Vágólapra</button>
+            <div id="status-clipboard-write" class="info">Nyomja meg a gombot a másolási teszt indításához...</div>
+            <h3>2.2. Vágólapról Olvasás</h3>
+            <p>A vágólap aktuális tartalmát próbáljuk beolvasni ide:</p>
+            <textarea id="readResult" rows="3" readonly placeholder="A vágólap beolvasott tartalma itt jelenik meg..."></textarea>
+            <button id="readButton">Vágólap Tartalmának Beolvasása</button>
+            <div id="status-clipboard-read" class="info">Nyomja meg a gombot a beolvasási teszt indításához...</div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. Beszédfelismerés Teszt (Speech Recognition)</h2>
+            <p>A mikrofon bemenetét próbálja értelmezni és szöveggé alakítani.</p>
+            <button id="startRecButton">Indít a Beszédfelismerést</button>
+            <button id="stopRecButton" disabled>Befejezés</button>
+            <div id="status-speech-rec" class="info">Nyomja meg a gombot az indításhoz. A böngésző engedélyt fog kérni a mikrofon használatára.</div>
+            <h3>Értelmezett szöveg:</h3>
+            <textarea id="recognizedText" rows="3" readonly placeholder="Az itt elhangzott szöveg itt jelenik meg..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Státusz és gomb elemek ---
+            const statusDivTts = document.getElementById('status-tts');
+            const speakButton = document.getElementById('speakButton');
+            const statusDivWrite = document.getElementById('status-clipboard-write');
+            const statusDivRead = document.getElementById('status-clipboard-read');
+            const writeButton = document.getElementById('writeButton');
+            const readButton = document.getElementById('readButton');
+            
+            const statusDivRec = document.getElementById('status-speech-rec');
+            const startRecButton = document.getElementById('startRecButton');
+            const stopRecButton = document.getElementById('stopRecButton');
+            const recognizedText = document.getElementById('recognizedText');
+
+            const textToSpeak = 'Helló world';
+            const textToWrite = document.getElementById('clipboardText').textContent;
+            const readResultArea = document.getElementById('readResult');
+
+            // --- TTS TESZT FUNKCIÓK ---
+            function checkTtsSupport() {
+                if ('speechSynthesis' in window) {
+                    statusDivTts.textContent = 'TTS Támogatás: A böngésző támogatja a felolvasást.';
+                    statusDivTts.className = 'info';
+                } else {
+                    statusDivTts.textContent = 'TTS Hiba: A böngésző NEM támogatja a Web Speech API-t (TTS).';
+                    statusDivTts.className = 'error';
+                    speakButton.disabled = true;
+                }
+            }
+
+            function startSpeech() {
+                if (!('speechSynthesis' in window)) return;
+                try {
+                    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                    utterance.onstart = () => { statusDivTts.textContent = 'Felolvasás indult...'; statusDivTts.className = 'success'; };
+                    utterance.onend = () => { statusDivTts.textContent = 'Felolvasás befejeződött sikeresen!'; };
+                    utterance.onerror = (event) => {
+                        statusDivTts.textContent = `Hiba történt a felolvasás során: ${event.error}.`;
+                        statusDivTts.className = 'error';
+                    };
+                    utterance.lang = 'hu-HU'; 
+                    utterance.rate = 1; 
+                    window.speechSynthesis.speak(utterance);
+                } catch (e) {
+                    statusDivTts.textContent = `Váratlan hiba a TTS indításakor: ${e.message}`;
+                    statusDivTts.className = 'error';
+                }
+            }
+
+            // --- VÁGÓLAP TESZT FUNKCIÓK ---
+            async function writeToClipboard() {
+                if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                    statusDivWrite.textContent = 'Hiba: A böngésző NEM támogatja a Vágólapra Írás API-t.';
+                    statusDivWrite.className = 'error';
+                    return;
+                }
+                try {
+                    await navigator.clipboard.writeText(textToWrite);
+                    statusDivWrite.textContent = `Siker! A következő szöveg a vágólapra került: "${textToWrite}"`;
+                    statusDivWrite.className = 'success';
+                } catch (err) {
+                    statusDivWrite.textContent = `Hiba a vágólapra íráskor: ${err.name} - ${err.message}.`;
+                    statusDivWrite.className = 'error';
+                }
+            }
+
+            async function readFromClipboard() {
+                readResultArea.value = 'Beolvasás indítása...';
+                if (!navigator.clipboard || !navigator.clipboard.readText) {
+                    statusDivRead.textContent = 'Hiba: A böngésző NEM támogatja a Vágólapról Olvasás API-t.';
+                    statusDivRead.className = 'error';
+                    readResultArea.value = 'Támogatás hiánya.';
+                    return;
+                }
+                try {
+                    const clipboardContent = await navigator.clipboard.readText();
+                    readResultArea.value = clipboardContent;
+                    statusDivRead.textContent = `Siker! A beolvasott tartalom: "${clipboardContent.substring(0, 50)}..."`;
+                    statusDivRead.className = 'success';
+                } catch (err) {
+                    statusDivRead.textContent = `Hiba a vágólapról olvasáskor: ${err.name} - ${err.message}. (Engedély megtagadva?)`;
+                    statusDivRead.className = 'error';
+                    readResultArea.value = 'Hiba a beolvasáskor.';
+                }
+            }
+
+            // --- BESZÉDFELISMERÉS TESZT FUNKCIÓK ---
+            // A prefixek ellenőrzése a szélesebb támogatásért (régebbi implementációk miatt)
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition = null;
+
+            function checkSpeechRecSupport() {
+                if (SpeechRecognition) {
+                    statusDivRec.textContent = 'Beszédfelismerés Támogatás: Az API elérhető.';
+                    statusDivRec.className = 'info';
+                } else {
+                    statusDivRec.textContent = 'Hiba: A böngésző NEM támogatja a Beszédfelismerés API-t.';
+                    statusDivRec.className = 'error';
+                    startRecButton.disabled = true;
+                    stopRecButton.disabled = true;
+                }
+            }
+
+            function startRecognition() {
+                if (!SpeechRecognition) return;
+
+                recognition = new SpeechRecognition();
+                recognition.lang = 'hu-HU'; // Magyar nyelvre állítva
+                recognition.interimResults = false; // Csak a végleges eredményeket mutatja
+                recognition.maxAlternatives = 1; 
+
+                // Indulás
+                recognition.onstart = () => {
+                    statusDivRec.textContent = 'Figyelek... Kérem beszéljen a mikrofonba!';
+                    statusDivRec.className = 'info';
+                    startRecButton.disabled = true;
+                    stopRecButton.disabled = false;
+                    recognizedText.value = '';
+                };
+
+                // Eredmény érkezése
+                recognition.onresult = (event) => {
+                    const speechResult = event.results[0][0].transcript;
+                    recognizedText.value = speechResult;
+                    statusDivRec.textContent = `Siker! Értelmezett szöveg: "${speechResult}"`;
+                    statusDivRec.className = 'success';
+                    stopRecognition();
+                };
+
+                // Hiba
+                recognition.onerror = (event) => {
+                    statusDivRec.textContent = `Hiba történt a beszédfelismerés során: ${event.error}. (Pl. Engedély megtagadva, vagy nincs hangbemenet.)`;
+                    statusDivRec.className = 'error';
+                    console.error('Speech Recognition Error:', event.error);
+                    stopRecognition();
+                };
+
+                // Befejezés (ha leállt a beszédfelismerés)
+                recognition.onend = () => {
+                    if (statusDivRec.className !== 'success' && statusDivRec.className !== 'error') {
+                        statusDivRec.textContent = 'Figyelés befejeződött (nincs hang észlelve).';
+                        statusDivRec.className = 'info';
+                    }
+                    stopRecognition();
+                };
+
+                recognition.start();
+            }
+
+            function stopRecognition() {
+                if (recognition) {
+                    recognition.stop();
+                    startRecButton.disabled = false;
+                    stopRecButton.disabled = true;
+                }
+            }
+
+
+            // --- Eseményfigyelők inicializálása ---
+            checkTtsSupport();
+            checkSpeechRecSupport();
+
+            speakButton.addEventListener('click', startSpeech);
+            writeButton.addEventListener('click', writeToClipboard);
+            readButton.addEventListener('click', readFromClipboard);
+            
+            startRecButton.addEventListener('click', startRecognition);
+            stopRecButton.addEventListener('click', stopRecognition);
+        });
+    </script>
+</body>
+</html>
