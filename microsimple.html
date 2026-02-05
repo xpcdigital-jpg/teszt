@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<!-- ez a fő html, neve microsimple.html -->
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>Két Ablakos Hangfelismerés</title>
+    <script src="extra1universal.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1400px; /* Növeltük a max-width-ot */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            box-sizing: border-box;
+        }
+        
+        .title {
+            text-align: center;
+            color: white;
+            font-size: 24px;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            width: 100%;
+        }
+        
+        .windows-container {
+            display: flex;
+            width: 100%;
+            gap: 15px;
+            min-height: 300px;
+            margin-bottom: 10px;
+            flex-wrap: nowrap; /* Mindig egymás mellett maradnak */
+        }
+        
+        .window {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            min-height: 250px;
+            min-width: 300px; /* Minimum szélesség hogy ne legyen túl keskeny */
+        }
+        
+        .window-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+            flex-shrink: 0;
+        }
+        
+        /* Szerkeszthető textarea stílus a bal oldali ablakhoz */
+        .editable-textarea {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-y: auto;
+            font-size: 36px; /* Tripla betűméret, de kicsit kisebb tableten */
+            line-height: 1.4;
+            min-height: 200px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-family: inherit;
+            resize: vertical;
+        }
+        
+        .editable-textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+        }
+        
+        .window-content {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-y: auto;
+            font-size: 36px; /* Tripla betűméret, de kicsit kisebb tableten */
+            line-height: 1.4;
+            min-height: 200px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .status-display {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 16px;
+            text-align: center;
+            width: 100%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            margin: 8px 0;
+            box-sizing: border-box;
+        }
+        
+        .buttons-row {
+            display: flex;
+            width: 100%;
+            gap: 10px;
+            margin: 5px 0;
+            flex-wrap: wrap; /* Gombok wrap-elhetnek keskeny képernyőn */
+        }
+        
+        .buttons-row.top-row {
+            margin-bottom: 5px;
+        }
+        
+        .buttons-row.bottom-row {
+            margin-top: 5px;
+        }
+        
+        .control-button {
+            flex: 1;
+            padding: 15px 8px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            min-height: 80px;
+            min-width: 120px; /* Minimum szélesség a gomboknak */
+        }
+        
+        .control-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .control-button:active {
+            transform: translateY(-1px);
+        }
+        
+        .button-1 { background: linear-gradient(135deg, #4CAF50, #2E7D32); }
+        .button-2 { background: linear-gradient(135deg, #FF9800, #E65100); }
+        .button-3 { background: linear-gradient(135deg, #9C27B0, #7B1FA2); }
+        .button-4 { background: linear-gradient(135deg, #2196F3, #0D47A1); }
+        .button-5 { background: linear-gradient(135deg, #00BCD4, #006064); }
+        .button-6 { background: linear-gradient(135deg, #FF5722, #BF360C); }
+        .button-7 { background: linear-gradient(135deg, #FF4081, #F50057); }
+        .button-8 { background: linear-gradient(135deg, #F44336, #B71C1C); }
+        
+        .button-label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .key-indicator {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin-top: 2px;
+        }
+        
+        .recording {
+            background: rgba(220, 53, 69, 0.3) !important;
+            border-color: #dc3545 !important;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .paused {
+            background: rgba(255, 193, 7, 0.3) !important;
+            border-color: #ffc107 !important;
+        }
+        
+        .success {
+            background: rgba(40, 167, 69, 0.3) !important;
+            border-color: #28a745 !important;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 12px;
+            width: 100%;
+            margin-top: 15px;
+            box-sizing: border-box;
+        }
+        
+        .instructions h3 {
+            color: #4CAF50;
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .instructions ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            grid-template-columns: 1fr; /* Mobilon egy oszlop */
+            gap: 10px;
+        }
+        
+        .instructions li {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .instructions li:last-child {
+            border-bottom: none;
+        }
+        
+        .key {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 4px;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        
+        .left-window {
+            border-color: #4CAF50;
+        }
+        
+        .right-window {
+            border-color: #2196F3;
+        }
+        
+        .empty-window {
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            font-size: 36px; /* Tripla betűméret */
+        }
+        
+        .clipboard-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(33, 150, 243, 0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 1.7s forwards;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            font-size: 14px;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        /* Táblagép és mobil módosítások - MOST MÁR EGYMÁS MELLETT MARADNAK */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .windows-container {
+                gap: 10px;
+                min-height: 250px;
+            }
+            
+            .window {
+                min-height: 220px;
+                min-width: 250px; /* Kisebb minimum szélesség tableten */
+                padding: 10px;
+            }
+            
+            .window-content, .empty-window, .editable-textarea {
+                font-size: 28px; /* Kisebb betűméret tableten */
+                padding: 10px;
+            }
+            
+            .control-button {
+                min-width: calc(25% - 8px); /* 4 gomb soronként tableten */
+                padding: 12px 6px;
+                min-height: 70px;
+                font-size: 14px;
+            }
+            
+            .button-label {
+                font-size: 10px;
+            }
+            
+            .instructions ul {
+                grid-template-columns: 1fr;
+            }
+            
+            .title {
+                font-size: 20px;
+            }
+        }
+        
+        /* Nagyon keskeny képernyők (mobil) */
+        @media (max-width: 600px) {
+            body {
+                padding: 5px;
+            }
+            
+            .container {
+                padding: 8px;
+                border-radius: 10px;
+            }
+            
+            .windows-container {
+                flex-direction: row; /* MÉG MINDIG egymás mellett! */
+                overflow-x: auto; /* Görgetés ha túl keskeny */
+                min-height: 200px;
+            }
+            
+            .window {
+                min-width: 280px; /* Mobilon is minimum szélesség */
+                min-height: 200px;
+            }
+            
+            .window-content, .empty-window, .editable-textarea {
+                font-size: 24px; /* Kisebb betűméret mobilon */
+            }
+            
+            .control-button {
+                min-width: calc(50% - 5px); /* 2 gomb soronként mobilon */
+                padding: 10px 5px;
+                min-height: 65px;
+                font-size: 14px;
+            }
+            
+            .button-label {
+                font-size: 9px;
+            }
+            
+            .instructions li {
+                font-size: 11px;
+            }
+            
+            .title {
+                font-size: 18px;
+            }
+        }
+        
+        /* Extra keskeny képernyők */
+        @media (max-width: 400px) {
+            .window {
+                min-width: 240px;
+            }
+            
+            .window-content, .empty-window, .editable-textarea {
+                font-size: 20px;
+            }
+            
+            .control-button {
+                min-width: calc(50% - 4px);
+                padding: 8px 4px;
+            }
+        }
+        
+        .suffix-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 87, 34, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        #youtube-background {
+            position: fixed;
+            top: -9999px;
+            left: -9999px;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            z-index: -9999;
+        }
+        
+        .music-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #4CAF50;
+            padding: 8px 15px;
+            border-radius: 15px;
+            z-index: 9999;
+            font-size: 14px;
+            display: none;
+            border: 1px solid #4CAF50;
+            backdrop-filter: blur(5px);
+            animation: fadeInOut 2s ease;
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(10px); }
+            20% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">🎤 Két Ablakos Hangfelismerés</h1>
+        
+        <div class="status-display" id="status">🟢 Készen áll - Várja a 8-as gombot a felismerés indításához</div>
+        
+        <div class="windows-container">
+            <div class="window left-window">
+                <div class="window-title">Bal ablak - Aktuális felismerés (szerkeszthető)</div>
+                <textarea id="leftWindowTextarea" class="editable-textarea"></textarea>
+            </div>
+            
+            <div class="window right-window">
+                <div class="window-title">Jobb ablak - Tároló (kattints/érintsd a másoláshoz)</div>
+                <div class="window-content" id="rightWindow">
+                    <div class="empty-window">Itt gyűlnek a bal ablakból átvitt szövegek</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="buttons-row top-row">
+            <button class="control-button button-1" onclick="handleButton1()">
+                <div>1️⃣</div>
+                <div class="button-label">Bal → Jobb áthelyezés</div>
+                <div class="key-indicator">Billentyű: 1</div>
+            </button>
+            
+            <button class="control-button button-2" onclick="handleButton2()">
+                <div>2️⃣</div>
+                <div class="button-label">Pont/Kérdőjel hozzáadása</div>
+                <div class="key-indicator">Billentyű: 2</div>
+            </button>
+            
+            <button class="control-button button-3" onclick="handleButton3()">
+                <div>3️⃣</div>
+                <div class="button-label">Minden visszaállítás</div>
+                <div class="key-indicator">Billentyű: 3</div>
+            </button>
+            
+            <button class="control-button button-4" onclick="handleButton4()">
+                <div>4️⃣</div>
+                <div class="button-label">Felolvasás/Letöltés</div>
+                <div class="key-indicator">Billentyű: 4</div>
+            </button>
+        </div>
+        
+        <div class="buttons-row bottom-row">
+            <button class="control-button button-5" onclick="handleButton5()">
+                <div>5️⃣</div>
+                <div class="button-label">Elválasztó hozzáadása</div>
+                <div class="key-indicator">Billentyű: 5</div>
+            </button>
+            
+            <button class="control-button button-6" onclick="handleButton6()">
+                <div>6️⃣</div>
+                <div class="button-label">Suffix kiválasztás/felolvasás</div>
+                <div class="key-indicator">Billentyű: 6</div>
+                <div id="suffixCounter" class="suffix-counter">1/12</div>
+            </button>
+            
+            <button class="control-button button-7" onclick="handleButton7()">
+                <div>7️⃣</div>
+                <div class="button-label">Jobb ablak mentése (első két mondat névvel)</div>
+                <div class="key-indicator">Billentyű: 7</div>
+            </button>
+            
+            <button class="control-button button-8" onclick="handleButton8()">
+                <div>8️⃣</div>
+                <div class="button-label">Felismerés indítása/megszakítása</div>
+                <div class="key-indicator">Billentyű: 8</div>
+            </button>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 Használati útmutató:</h3>
+            <ul>
+                <li><span class="key">8</span> - Egyszer megnyomva: hangfelismerés leállítása és a bal ablak tartalmának felolvasása</li>
+                <li><span class="key">8</span> - Gyorsan kétszer megnyomva: bal ablak törlése és hangfelismerés újraindítása</li>
+                <li><span class="key">1</span> - Bal ablak tartalmának áthelyezése a jobb ablakba (folytatásként) és bal ablak törlése</li>
+                <li><span class="key">2</span> - Egyszer megnyomva: pont hozzáadása a bal ablak végére</li>
+                <li><span class="key">2</span> - Gyorsan kétszer megnyomva: kérdőjel hozzáadása a bal ablak végére</li>
+                <li><span class="key">3</span> - Minden visszaállítása alapállapotba (mindkét ablak törlése, felismerés leállítása)</li>
+                <li><span class="key">4</span> - Egyszeri nyomás: jobb ablak tartalmának felolvasása (most már felkiáltójelet, kérdőjelet és pontot is felolvas)</li>
+                <li><span class="key">4</span> - Gyorsan kétszer megnyomva: jobb ablak tartalmának letöltése txt fájlként</li>
+                <li><span class="key">5</span> - Elválasztó sor hozzáadása a jobb ablak végére</li>
+                <li><span class="key">6</span> - Suffix ciklikus kiválasztása, bal ablakba írása és felolvasása (12 lehetőség)</li>
+                <li><span class="key">7</span> - Egyszeri nyomás: jobb ablak mentése txt fájlként (első két mondat fájlnévként)</li>
+                <li><span class="key">7</span> - Gyorsan kétszer megnyomva: jobb ablak tartalmának másolása vágólapra</li>
+                <li><span class="key">Kattintás a jobb ablakra</span> - Jobb ablak tartalmának másolása vágólapra</li>
+                <li><span class="key">Bal ablak</span> - Most már szerkeszthető textarea, közvetlenül írhatsz vagy módosíthatsz szöveget</li>
+            </ul>
+            <p style="margin-top: 15px; font-size: 12px; opacity: 0.9;"><strong>Megjegyzés:</strong> A jobb ablak tartalma csak bővül, soha nem törlődik. Kattintással vagy érintéssel másolható vágólapra.</p>
+        </div>
+    </div>
+
+    <!-- Zene státusz jelző -->
+    <div id="music-status" class="music-status">🎵 Háttérzene aktív</div>
+
+    <div id="youtube-background">
+    <iframe 
+        id="youtube-player"
+        width="0" 
+        height="0" 
+        src="https://www.youtube.com/embed/eA2onFhKfpU?autoplay=0&loop=1&playlist=eA2onFhKfpU&mute=1&controls=0&showinfo=0&rel=0&modestbranding=1&hl=hu-HU&enablejsapi=1" 
+        frameborder="0" 
+        allow="autoplay; encrypted-media" 
+        allowfullscreen>
+    </iframe>
+</div>
+
+    <script>
+        // YouTube háttérzene változók
+        let youtubePlayer = null;
+        let musicStarted = false;
+        let playerReady = false;
+
+        // YouTube API inicializálása - JAVÍTOTT
+        function onYouTubeIframeAPIReady() {
+            youtubePlayer = new YT.Player('youtube-player', {
+                playerVars: {
+                    'autoplay': 0,
+                    'loop': 1,
+                    'playlist': 'NK3OU-Ka_hA',
+                    'mute': 1,
+                    'controls': 0,
+                    'showinfo': 0,
+                    'rel': 0,
+                    'modestbranding': 1,
+                    'hl': 'hu-HU'
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange,
+                    'onError': onPlayerError
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            playerReady = true;
+            // Alapértelmezett hangerő beállítása
+            event.target.setVolume(1);
+            console.log("✅ YouTube player kész és készen áll");
+        }
+
+        function onPlayerStateChange(event) {
+            // Ha a videó véget ért, újraindítjuk
+            if (event.data === YT.PlayerState.ENDED) {
+                event.target.playVideo();
+            }
+            
+            // Debug információ
+            console.log("YouTube állapot változás:", event.data);
+        }
+
+        function onPlayerError(event) {
+            console.error("YouTube player hiba:", event.data);
+        }
+
+        // Zene indítása - CSAK EGYSZER - JAVÍTOTT
+        function startBackgroundMusicOnce() {
+            console.log("startBackgroundMusicOnce hívva");
+            console.log("musicStarted:", musicStarted);
+            console.log("playerReady:", playerReady);
+            console.log("youtubePlayer:", youtubePlayer);
+            
+            if (musicStarted) {
+                console.log("⚠️ Zene már elindult, nem indul újra");
+                return false;
+            }
+            
+            if (!playerReady || !youtubePlayer) {
+                console.log("❌ YouTube player nincs kész vagy nincs inicializálva");
+                return false;
+            }
+            
+            try {
+                // JAVÍTOTT: YouTube API megfelelő metódusok
+                // 1. Először némítás feloldása
+                youtubePlayer.unMute();  // Ez a helyes metódusnév
+                
+                // 2. Lejátszás indítása
+                youtubePlayer.playVideo();
+                
+                musicStarted = true;
+                
+                // Státusz jelző
+                const statusEl = document.getElementById('music-status');
+                if (statusEl) {
+                    statusEl.style.display = 'block';
+                    setTimeout(() => {
+                        statusEl.style.display = 'none';
+                    }, 2000);
+                }
+                
+                console.log("✅ Háttérzene elindítva (csak egyszer)");
+                return true;
+            } catch (error) {
+                console.log("❌ Zene indítási hiba:", error);
+                
+                // Alternatív módszer, ha az első nem működik
+                try {
+                    // A player objektumon keresztül is megpróbálhatjuk
+                    if (youtubePlayer.player) {
+                        youtubePlayer.player.unMute();
+                        youtubePlayer.player.playVideo();
+                        musicStarted = true;
+                        console.log("✅ Háttérzene elindítva (alternatív módszer)");
+                        return true;
+                    }
+                } catch (altError) {
+                    console.log("❌ Alternatív zene indítási hiba:", altError);
+                }
+                
+                return false;
+            }
+        }
+
+        // Fő változók
+        const status = document.getElementById('status');
+        const leftWindowTextarea = document.getElementById('leftWindowTextarea');
+        const rightWindow = document.getElementById('rightWindow');
+        const suffixCounter = document.getElementById('suffixCounter');
+        
+        let recognition = null;
+        let isRecording = false;
+        let lastButton2Press = 0;
+        let lastButton3Press = 0;
+        let lastButton4Press = 0;
+        let lastButton6Press = 0;
+        let lastButton7Press = 0;
+        let leftWindowText = '';
+        let rightWindowText = '';
+        
+        // 8-as gomb változók
+        let key8PressStartTime = 0;
+        let key8LongPressTimer = null;
+        let key8WasLongPress = false;
+        const LONG_PRESS_DURATION = 1000;
+        
+        let lastButton8Press = 0;
+        const DOUBLE_PRESS_TIME = 300;
+        
+        // Suffix lista (12 elem)
+        let suffixSelectionState = 0;
+        let selectedSuffix = "";
+        const suffixes = [
+            
+               "A többi kódon ne változtass. Kérem az egész html kódokat végig. a módosítások végrehajtása során törekedj a kis és hatékony kódok alkalmazására.",
+            
+            "repülőn játszódik a történet.  kérek konkrét friss helyszínhez köthető háttérzajokat ambiance videókat, URL címeket. lehet általánosabb de azért a helyszínhez hasonló.És legvégül 5 db , a szöveg helyszínéhez köthető vagy passzoló háttérzajokat ambiance videókat keresőprompt szöveget, angolul. Ezek legyenek google keresőlinkek (kattintva ugrósak).",
+            
+            "Kérem az egész html kódokat végig.",
+            "Csak a szkript kódokat kérem, a script tagtól végig, a body és html Closing tagokkal.",
+           
+            "a módosított szkript kódokat kérem a script tagtól a ==========felecomment==========comment sorig.",
+            "a szkript kódokat kérem a ==========felecomment==========comment sortól végig a body és html Closing tagokkal.",
+            
+            "van-e módosítás a fele comment utáni részben az eddigi kérésem alapján? vagy ez marad ugyanúgy?",
+            
+            
+            
+            "Kérek youtube konkrét friss linkeket. Írd ki a linkeket. Téma a ",
+            "Ajánlj konkrét friss youtube címeket, ehhez passzoló ambience zene nélküli videókat. Írd ki a linkeket.",
+            
+            "te kreatív vagy? írd át a történetet. a legfontosabb hogy jóval részletesebben legyenek az akciók, jelenetek ábrázolva, legyen benne még több helyzetkomikum és bohózat némi iróniával fűszerezve. a fekete humor se hiányozzon belőle. legyenek átvezető jelenetek mozifilm szerű kamera nézetek és nézőpont váltások a helyszínek és a történet lényege maradhat hasonló vagy ugyanaz.",
+            
+            "Te kreatív vagy? folytasd, írd meg a következő fejezetet. Kapcsolódjon az első fejezethez. (a stílushoz és hangulathoz hűen)",
+            
+             "van e benne komolyabb hiba (a hiányzó funkciókat nem számítva)?",
+                "A meglévő scriptet módosítsd. ",
+                "Minél kevesebb kóddal minél kevesebb karakterrel minél egyszerűbben kérem az újításokat.",
+                
+            "Generálj képet. Jellegzetes, élénk színekkel, kontrasztos fény-árnyék hatásokkal, kissé rajzfilmszerű, de mégis részleteiben kidolgozott, dinamikus és akciódús vizuális megjelenést használva.",
+            
+            "kérek javascriptet. legyen hozzá egy scriptből létrehozott ízléses de kevés kódból álló opciós menü. ez az options menü legyen megnyitható a következő gombok együttes lenyomásával: kilences gomb és az i gomb lenyomása. minden legyen kizárólag javascriptből létrehozva. a további részleteket később fogjuk megalkotni és most kérem a kódot.legyen globálisan könnyen meghívható funkció. kérek példa meghívást commentet.",
+            
+            
+            "Fókuszálj a megadott struktúrára.",
+            "aaa",
+        ];
+        
+        // Jobb ablak eseményfigyelők
+        rightWindow.addEventListener('click', function() {
+            if (rightWindowText.trim()) {
+                copyRightWindowToClipboard();
+            } else {
+                playWarningBeep();
+                showNotification("📝 Nincs szöveg a jobb ablakban!");
+            }
+        });
+        
+        rightWindow.addEventListener('touchend', function(event) {
+            if (rightWindowText.trim()) {
+                event.preventDefault();
+                copyRightWindowToClipboard();
+            } else {
+                playWarningBeep();
+                showNotification("📝 Nincs szöveg a jobb ablakban!");
+            }
+        });
+        
+        // Bal ablak textarea eseményfigyelő - szinkronizálja a változást
+        leftWindowTextarea.addEventListener('input', function() {
+            leftWindowText = leftWindowTextarea.value;
+        });
+        
+        // Alapvető függvények
+        function copyRightWindowToClipboard() {
+            if (!rightWindowText.trim()) return;
+            
+            navigator.clipboard.writeText(rightWindowText).then(() => {
+                showNotification("📋 Jobb ablak tartalma vágólapra másolva!");
+            }).catch(err => {
+                console.error('Vágólapra másolás hiba:', err);
+                showNotification("❌ Hiba a vágólapra másoláskor");
+            });
+        }
+        
+        function stopAllSpeech() {
+            if (speechSynthesis.speaking) {
+                speechSynthesis.cancel();
+            }
+        }
+        
+        function updateSuffixCounter() {
+            suffixCounter.textContent = `${suffixSelectionState + 1}/${suffixes.length}`;
+        }
+        
+        function showNotification(message) {
+            const existingNotifications = document.querySelectorAll('.clipboard-notification');
+            existingNotifications.forEach(notification => notification.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = 'clipboard-notification';
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) notification.remove();
+            }, 2000);
+        }
+        
+        function updateRightWindow() {
+            if (rightWindowText.trim()) {
+                rightWindow.innerHTML = `<div>${rightWindowText}</div>`;
+                rightWindow.classList.remove('empty-window');
+            } else {
+                rightWindow.innerHTML = '<div class="empty-window">Itt gyűlnek a bal ablakból átvitt szövegek</div>';
+            }
+        }
+        
+        function updateLeftWindow() {
+            leftWindowTextarea.value = leftWindowText || "";
+        }
+        
+        function getRandomWordsFromText(text, count) {
+            if (!text.trim()) return "szoveg";
+            
+            const words = text.split(/\s+/).filter(word => word.length > 2);
+            const selectedWords = [];
+            
+            if (words.length === 0) return "szoveg";
+            
+            for (let i = 0; i < count; i++) {
+                if (words.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * words.length);
+                    let cleanWord = words[randomIndex].replace(/[.,?!;:()"']/g, '');
+                    if (cleanWord.length > 0) selectedWords.push(cleanWord);
+                }
+            }
+            
+            while (selectedWords.length < count) {
+                selectedWords.push("szoveg" + (selectedWords.length + 1));
+            }
+            
+            return selectedWords.slice(0, count).join('_');
+        }
+        
+        // Gombkezelők
+        function handleButton1() {
+            // Frissítjük a változót a textarea aktuális tartalmával
+            leftWindowText = leftWindowTextarea.value.trim();
+            
+            if (!leftWindowText) {
+                status.textContent = "📝 Nincs szöveg a bal ablakban!";
+                status.className = "status-display";
+                playWarningBeep();
+                return;
+            }
+            
+            if (rightWindowText.trim()) {
+                rightWindowText += ' ' + leftWindowText;
+            } else {
+                rightWindowText = leftWindowText;
+            }
+            
+            updateRightWindow();
+            leftWindowText = '';
+            updateLeftWindow();
+            
+            copyRightWindowToClipboard();
+            
+            status.textContent = "✅ Bal ablak tartalma átkerült a jobb ablakba (vágólapra másolva)";
+            status.className = "status-display success";
+            playSuccessBeep();
+        }
+        
+        function handleButton2() {
+            const currentTime = Date.now();
+            const isDoublePress = (currentTime - lastButton2Press) < DOUBLE_PRESS_TIME;
+            
+            // Frissítjük a változót a textarea aktuális tartalmával
+            leftWindowText = leftWindowTextarea.value.trim();
+            
+            if (!leftWindowText) {
+                status.textContent = "📝 Nincs szöveg a bal ablakban!";
+                status.className = "status-display";
+                playWarningBeep();
+                lastButton2Press = currentTime;
+                return;
+            }
+            
+            leftWindowText = leftWindowText.trim();
+            if (leftWindowText.endsWith('.')) leftWindowText = leftWindowText.slice(0, -1);
+            if (leftWindowText.endsWith('?')) leftWindowText = leftWindowText.slice(0, -1);
+            if (leftWindowText.endsWith('!')) leftWindowText = leftWindowText.slice(0, -1);
+            
+            if (isDoublePress) {
+                leftWindowText += '?';
+                status.textContent = "❓ Kérdőjel hozzáadva";
+                playDeleteBeep();
+            } else {
+                leftWindowText += '.';
+                status.textContent = "🔵 Pont hozzáadva";
+                playSuccessBeep();
+            }
+            
+            updateLeftWindow();
+            lastButton2Press = currentTime;
+        }
+        
+        function handleButton3() {
+            const currentTime = Date.now();
+            const isDoublePress = (currentTime - lastButton3Press) < DOUBLE_PRESS_TIME;
+            
+            stopVoiceRecognition();
+            stopAllSpeech();
+            
+            leftWindowText = '';
+            rightWindowText = '';
+            updateLeftWindow();
+            updateRightWindow();
+            
+            suffixSelectionState = 0;
+            updateSuffixCounter();
+            
+            status.textContent = "🔄 Minden visszaállítva alapállapotba";
+            status.className = "status-display success";
+            
+            playDeleteBeep();
+            lastButton3Press = currentTime;
+        }
+        
+        function handleButton4() {
+            const currentTime = Date.now();
+            const isDoublePress = (currentTime - lastButton4Press) < DOUBLE_PRESS_TIME;
+            
+            if (!rightWindowText.trim()) {
+                status.textContent = "📝 Nincs szöveg a jobb ablakban!";
+                status.className = "status-display";
+                playWarningBeep();
+                lastButton4Press = currentTime;
+                return;
+            }
+            
+            if (isDoublePress) {
+                const filename = getRandomWordsFromText(rightWindowText, 3) + '.txt';
+                downloadTextAsFile(rightWindowText, filename);
+                status.textContent = "💾 Jobb ablak tartalma letöltve: " + filename;
+                playSuccessBeep();
+            } else {
+                // MÓDOSÍTOTT: Most már felkiáltójelet, kérdőjelet és pontot is felolvas
+                const textWithPunctuation = rightWindowText
+                    .replace(/\./g, ' . ')
+                    .replace(/\?/g, ' ? ')
+                    .replace(/!/g, ' ! ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                readTextAloud(textWithPunctuation, 0.8);
+                status.textContent = "🔊 Jobb ablak tartalma felolvasva (most már pontot, kérdőjelet és felkiáltójelet is)";
+                playSuccessBeep();
+            }
+            
+            lastButton4Press = currentTime;
+        }
+        
+        function handleButton5() {
+            if (rightWindowText.trim()) {
+                rightWindowText += '\n\n';
+            } else {
+                rightWindowText = '\n\n';
+            }
+            
+            updateRightWindow();
+            copyRightWindowToClipboard();
+            
+            status.textContent = "📎 Elválasztó hozzáadva a jobb ablak végére (vágólapra másolva)";
+            status.className = "status-display success";
+            playSuccessBeep();
+        }
+        
+        function handleButton6() {
+            const currentTime = Date.now();
+            const isDoublePress = (currentTime - lastButton6Press) < DOUBLE_PRESS_TIME;
+            
+            if (isDoublePress) {
+                playSpecialBeep();
+                return;
+            }
+            
+            stopAllSpeech();
+            
+            if (suffixSelectionState >= suffixes.length) suffixSelectionState = 0;
+            selectedSuffix = suffixes[suffixSelectionState];
+            
+            leftWindowText = selectedSuffix;
+            
+            readTextAloud(selectedSuffix, 0.8);
+            updateLeftWindow();
+            updateSuffixCounter();
+            
+            status.textContent = `✅ Beszéd leállítva, suffix ${suffixSelectionState + 1}/${suffixes.length} bal ablakba írva és felolvasva`;
+            status.className = "status-display success";
+            playSuccessBeep();
+            
+            suffixSelectionState++;
+            if (suffixSelectionState >= suffixes.length) suffixSelectionState = 0;
+            
+            lastButton6Press = currentTime;
+        }
+        
+        function handleButton7() {
+            const currentTime = Date.now();
+            const isDoublePress = (currentTime - lastButton7Press) < DOUBLE_PRESS_TIME;
+            
+            if (!rightWindowText.trim()) {
+                status.textContent = "📝 Nincs szöveg a jobb ablakban!";
+                status.className = "status-display";
+                playWarningBeep();
+                lastButton7Press = currentTime;
+                return;
+            }
+            
+            const firstTwoSentences = extractFirstTwoSentences(rightWindowText);
+            let filename = "hangfelismeres.txt";
+            
+            if (firstTwoSentences && firstTwoSentences.trim().length > 0) {
+                filename = cleanTextForFilename(firstTwoSentences);
+                if (filename.length > 50) filename = filename.substring(0, 50);
+                if (!filename.toLowerCase().endsWith('.txt')) filename += '.txt';
+            }
+            
+            if (isDoublePress) {
+                navigator.clipboard.writeText(rightWindowText).then(() => {
+                    showNotification("📋 Jobb ablak tartalma a vágólapra másolva!");
+                });
+                status.textContent = "📋 Jobb ablak tartalma vágólapra másolva";
+                playSuccessBeep();
+            } else {
+                downloadTextAsFile(rightWindowText, filename);
+                status.textContent = `💾 Mentve: ${filename}`;
+                playSuccessBeep();
+            }
+            
+            lastButton7Press = currentTime;
+        }
+        
+        // 8-as gomb: JAVÍTOTT - zene csak egyszer indul
+        function handleButton8Single() {
+            const currentTime = Date.now();
+            const isDoublePress = (currentTime - lastButton8Press) < DOUBLE_PRESS_TIME;
+            
+            lastButton8Press = currentTime;
+            
+            if (isDoublePress) {
+                stopVoiceRecognition();
+                stopAllSpeech();
+                
+                leftWindowText = '';
+                updateLeftWindow();
+                
+                setTimeout(() => {
+                    startVoiceRecognition();
+                }, 100);
+                
+                status.textContent = "🔄 Bal ablak törölve, hangfelismerés újraindítva (dupla nyomás)";
+                status.className = "status-display";
+                playDeleteBeep();
+                return;
+            }
+            
+            if (isRecording) {
+                stopVoiceRecognition();
+                
+                // Frissítjük a változót a textarea aktuális tartalmával
+                leftWindowText = leftWindowTextarea.value.trim();
+                
+                if (leftWindowText) {
+                    // MÓDOSÍTOTT: Most már felkiáltójelet, kérdőjelet és pontot is felolvas
+                    const textWithPunctuation = leftWindowText
+                        .replace(/\./g, ' . ')
+                        .replace(/\?/g, ' ? ')
+                        .replace(/!/g, ' ! ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    readTextAloud(textWithPunctuation, 0.8);
+                    status.textContent = "🔊 Hangfelismerés leállítva, felolvasva (most már pontot, kérdőjelet és felkiáltójelet is)";
+                    status.className = "status-display success";
+                } else {
+                    status.textContent = "⏸️ Hangfelismerés leállítva";
+                    status.className = "status-display";
+                }
+                
+                playSuccessBeep();
+            } else {
+                startVoiceRecognition();
+                // Zene indítása csak első alkalommal
+                if (!musicStarted) {
+                    console.log("Zene indítása...");
+                    const musicSuccess = startBackgroundMusicOnce();
+                    if (musicSuccess) {
+                        status.textContent = "🎤 Hangfelismerés indítva + 🎵 Háttérzene elindítva";
+                    } else {
+                        status.textContent = "🎤 Hangfelismerés indítva (zene indítás sikertelen)";
+                    }
+                } else {
+                    status.textContent = "🎤 Hangfelismerés indítva";
+                }
+                playStartBeep();
+            }
+        }
+        
+        function handleButton8LongPress() {
+            key8WasLongPress = true;
+            
+            leftWindowText = '';
+            updateLeftWindow();
+            
+            if (isRecording) stopVoiceRecognition();
+            
+            setTimeout(() => {
+                startVoiceRecognition();
+            }, 100);
+            
+            status.textContent = "🔄 Bal ablak törölve, hangfelismerés indítva (hosszú nyomás)";
+            status.className = "status-display";
+            playDeleteBeep();
+            
+            lastButton8Press = Date.now();
+        }
+        
+        function handleButton8() {
+            handleButton8Single();
+        }
+        
+        function handleButton8KeyDown() {
+            if (!key8PressStartTime) {
+                key8PressStartTime = Date.now();
+                key8WasLongPress = false;
+                
+                key8LongPressTimer = setTimeout(() => {
+                    handleButton8LongPress();
+                }, LONG_PRESS_DURATION);
+            }
+        }
+        
+        function handleButton8KeyUp() {
+            const currentTime = Date.now();
+            
+            if (key8LongPressTimer) {
+                clearTimeout(key8LongPressTimer);
+                key8LongPressTimer = null;
+            }
+            
+            if (key8PressStartTime && !key8WasLongPress) {
+                const pressDuration = currentTime - key8PressStartTime;
+                
+                if (pressDuration < LONG_PRESS_DURATION) {
+                    handleButton8Single();
+                }
+            }
+            
+            key8PressStartTime = 0;
+        }
+        
+        // Segédfüggvények
+        function extractFirstTwoSentences(text) {
+            if (!text.trim()) return "";
+            
+            const sentenceRegex = /[^.!?]+[.!?]+/g;
+            const sentences = text.match(sentenceRegex);
+            
+            if (!sentences || sentences.length === 0) {
+                const words = text.trim().split(/\s+/).slice(0, 3);
+                return words.join(' ');
+            }
+            
+            const firstTwo = sentences.slice(0, 2);
+            return firstTwo.join(' ').trim();
+        }
+        
+        function cleanTextForFilename(text) {
+            if (!text.trim()) return "hangfelismeres";
+            
+            const diacriticsMap = {
+                'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ö': 'o', 'ő': 'o', 'ú': 'u', 'ü': 'u', 'ű': 'u',
+                'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ö': 'O', 'Ő': 'O', 'Ú': 'U', 'Ü': 'U', 'Ű': 'U'
+            };
+            
+            let cleaned = text.trim();
+            cleaned = cleaned.replace(/[áéíóöőúüűÁÉÍÓÖŐÚÜŰ]/g, match => diacriticsMap[match] || match);
+            cleaned = cleaned.replace(/[^a-zA-Z0-9\s\-_.,!?]/g, ' ');
+            cleaned = cleaned.replace(/\s+/g, ' ');
+            
+            if (!cleaned.trim()) return "hangfelismeres";
+            
+            const words = cleaned.trim().split(/\s+/);
+            if (words.length > 6) cleaned = words.slice(0, 6).join(' ');
+            
+            return cleaned.trim();
+        }
+        
+        function downloadTextAsFile(text, filename) {
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+        }
+        
+        function startVoiceRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                status.textContent = "❌ Böngésző nem támogatja a hangfelismerést";
+                return false;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            
+            recognition.lang = 'hu-HU';
+            recognition.interimResults = false;
+            recognition.continuous = true;
+            
+            recognition.onstart = function() {
+                isRecording = true;
+                status.textContent = "🎤 Hangfelismerés folyamatban...";
+                status.className = "status-display recording";
+                playStartBeep();
+            };
+            
+            recognition.onresult = function(event) {
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        const transcript = event.results[i][0].transcript.trim();
+                        if (transcript) {
+                            if (leftWindowText) {
+                                leftWindowText += ' ' + transcript;
+                            } else {
+                                leftWindowText = transcript;
+                            }
+                            updateLeftWindow();
+                        }
+                    }
+                }
+            };
+            
+            recognition.onerror = function(event) {
+                console.error('Hangfelismerési hiba:', event.error);
+                if (event.error === 'not-allowed') status.textContent = "❌ Engedélyezze a mikrofont!";
+                stopVoiceRecognition();
+            };
+            
+            recognition.onend = function() {
+                if (isRecording && recognition) {
+                    setTimeout(() => {
+                        try { recognition.start(); } catch (e) { console.error('Újraindítási hiba:', e); }
+                    }, 100);
+                }
+            };
+            
+            try {
+                recognition.start();
+                return true;
+            } catch (e) {
+                console.error('Indítási hiba:', e);
+                status.textContent = "❌ Indítási hiba";
+                return false;
+            }
+        }
+        
+        function stopVoiceRecognition() {
+            if (recognition) recognition.stop();
+            isRecording = false;
+            status.classList.remove('recording');
+        }
+        
+        function readTextAloud(text, volume) {
+            if (!text.trim()) return;
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'hu-HU';
+            utterance.volume = volume;
+            
+            utterance.onstart = () => status.textContent = "🔊 Visszaolvasás...";
+            utterance.onend = () => setTimeout(() => { status.textContent = "🟢 Készen áll"; }, 500);
+            
+            speechSynthesis.speak(utterance);
+        }
+        
+        // Hangjelzések
+        function playBeep(frequency, duration, volume, type) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.type = type;
+                oscillator.frequency.value = frequency;
+                gainNode.gain.value = volume;
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                const currentTime = audioContext.currentTime;
+                gainNode.gain.setValueAtTime(0.001, currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(volume, currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + duration / 1000);
+                
+                oscillator.start(currentTime);
+                oscillator.stop(currentTime + duration / 1000);
+            } catch (e) { console.error('Hangjelzés hiba:', e); }
+        }
+        
+        function playSpecialBeep() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator1 = audioContext.createOscillator();
+                const oscillator2 = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator1.type = 'sine'; oscillator1.frequency.value = 600;
+                oscillator2.type = 'sine'; oscillator2.frequency.value = 800;
+                gainNode.gain.value = 0.1;
+                
+                oscillator1.connect(gainNode);
+                oscillator2.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                const currentTime = audioContext.currentTime;
+                gainNode.gain.setValueAtTime(0.001, currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.1, currentTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.3);
+                
+                oscillator1.start(currentTime);
+                oscillator2.start(currentTime);
+                oscillator1.stop(currentTime + 0.3);
+                oscillator2.stop(currentTime + 0.3);
+            } catch (e) { console.error('Speciális hangjelzés hiba:', e); }
+        }
+        
+        function playStartBeep() { playBeep(800, 100, 0.1, 'sine'); }
+        function playSuccessBeep() { playBeep(600, 150, 0.1, 'sine'); }
+        function playDeleteBeep() { playBeep(400, 200, 0.1, 'sawtooth'); }
+        function playWarningBeep() { playBeep(300, 150, 0.1, 'square'); }
+        
+        // Billentyűzet kezelés
+        document.addEventListener('keydown', function(e) {
+            const activeElement = document.activeElement;
+            const isInput = activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA';
+            
+            // Ha a bal oldali textarea-ban vagyunk, csak az Escape billentyű működjön
+            if (activeElement.id === 'leftWindowTextarea' && e.key !== 'Escape') {
+                return;
+            }
+            
+            // Ha más input mezőben vagyunk, nem dolgozzuk fel a billentyűket
+            if (isInput && activeElement.id !== 'leftWindowTextarea') return;
+            
+            switch(e.key) {
+                case '1': e.preventDefault(); handleButton1(); break;
+                case '2': e.preventDefault(); handleButton2(); break;
+                case '3': e.preventDefault(); handleButton3(); break;
+                case '4': e.preventDefault(); handleButton4(); break;
+                case '5': e.preventDefault(); handleButton5(); break;
+                case '6': e.preventDefault(); handleButton6(); break;
+                case '7': e.preventDefault(); handleButton7(); break;
+                case '8': e.preventDefault(); handleButton8KeyDown(); break;
+                case 'Escape': e.preventDefault(); stopVoiceRecognition(); stopAllSpeech(); status.textContent = "🛑 Vészleállítás"; playWarningBeep(); break;
+            }
+        });
+        
+        document.addEventListener('keyup', function(e) {
+            const activeElement = document.activeElement;
+            const isInput = activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA';
+            
+            // Ha a bal oldali textarea-ban vagyunk, csak az Escape billentyű működjön
+            if (activeElement.id === 'leftWindowTextarea' && e.key !== 'Escape') {
+                return;
+            }
+            
+            // Ha más input mezőben vagyunk, nem dolgozzuk fel a billentyűket
+            if (isInput && activeElement.id !== 'leftWindowTextarea') return;
+            
+            if (e.key === '8') {
+                e.preventDefault();
+                handleButton8KeyUp();
+            }
+        });
+        
+        // Inicializálás
+        document.addEventListener('DOMContentLoaded', function() {
+            // YouTube API betöltése
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+            
+            // 8-as gomb eseménykezelők
+            const button8 = document.querySelector('.button-8');
+            
+            button8.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                handleButton8KeyDown();
+            });
+            
+            button8.addEventListener('mouseup', function(e) {
+                e.preventDefault();
+                handleButton8KeyUp();
+            });
+            
+            button8.addEventListener('mouseleave', function() {
+                if (key8LongPressTimer) {
+                    clearTimeout(key8LongPressTimer);
+                    key8LongPressTimer = null;
+                }
+                key8PressStartTime = 0;
+                key8WasLongPress = false;
+            });
+            
+            button8.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                handleButton8KeyDown();
+            });
+            
+            button8.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                handleButton8KeyUp();
+            });
+            
+            button8.addEventListener('touchcancel', function() {
+                if (key8LongPressTimer) {
+                    clearTimeout(key8LongPressTimer);
+                    key8LongPressTimer = null;
+                }
+                key8PressStartTime = 0;
+                key8WasLongPress = false;
+            });
+            
+            button8.addEventListener('click', function(e) {
+                handleButton8Single();
+            });
+            
+            console.log('✅ Alkalmazás betöltve');
+            console.log('✅ YouTube háttérzene inicializálva');
+            console.log('✅ 8-as gomb indítja a zenét (csak egyszer)');
+            console.log('✅ Bal ablak most már szerkeszthető textarea');
+            
+            updateSuffixCounter();
+        });
+        
+        
+// CLOSE - Aktuális fület/böngészőablakot bezárja '0' gombbal
+document.addEventListener('keydown', function(event) {
+    // Ha a '0' billentyűt nyomják meg
+    if (event.key === '0' || event.key === 'Num0' || event.keyCode === 48 || event.keyCode === 96) {
+        // Opcionális: Ctrl+0 kombinációra korlátozás, hogy ne történjen véletlen bezárás
+        // if (event.ctrlKey) {
+            window.close();
+            event.preventDefault(); // Megakadályozzuk az alapértelmezett viselkedést
+        // }
+    }
+});
+
+    </script>
+</body>
+</html>
