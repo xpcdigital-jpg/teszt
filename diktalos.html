@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<!-- Diktálós - Layer rendszer, WASD karakterekkel -->
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>Diktálós v2</title>
+<script src="extra1universal.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,max-scale=1,user-scalable=no">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow-x:hidden;padding:10px}
+.c{width:100%;max-width:1400px;display:flex;flex-direction:column;align-items:center;gap:15px;background:rgba(0,0,0,.7);padding:15px;border-radius:15px;box-shadow:0 10px 30px #0006}
+h1{text-align:center;font-size:24px;margin:0 0 5px;text-shadow:0 2px 4px #0000004d;width:100%}
+.w{display:flex;width:100%;gap:15px;min-height:300px;flex-wrap:nowrap}
+.wi{flex:1;display:flex;flex-direction:column;background:rgba(255,255,255,.1);border-radius:12px;padding:12px;border:2px solid rgba(255,255,255,.2);backdrop-filter:blur(10px);min-height:250px;min-width:300px}
+.wi-l{border-color:#4caf50}
+.wi-r{border-color:#2196f3}
+.wt{font-size:16px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.2);text-align:center}
+.et{flex:1;background:rgba(0,0,0,.3);border-radius:8px;padding:12px;overflow-y:auto;font-size:36px;line-height:1.4;min-height:200px;white-space:pre-wrap;word-wrap:break-word;color:#fff;border:1px solid rgba(255,255,255,.3);font-family:inherit;resize:vertical}
+.et:focus{outline:0;border-color:#4caf50;box-shadow:0 0 0 2px #4caf504d}
+.wc{flex:1;background:rgba(0,0,0,.3);border-radius:8px;padding:12px;overflow-y:auto;font-size:36px;line-height:1.4;min-height:200px;white-space:pre-wrap;word-wrap:break-word}
+.s{background:rgba(255,255,255,.1);padding:12px 20px;border-radius:12px;font-size:16px;text-align:center;width:100%;border:2px solid rgba(255,255,255,.2);backdrop-filter:blur(10px);margin:8px 0}
+.br{display:flex;width:100%;gap:10px;margin:5px 0;flex-wrap:wrap}
+.btn{flex:1;padding:15px 8px;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;transition:.3s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;box-shadow:0 5px 15px #0000004d;min-height:80px;min-width:120px}
+.btn:hover{transform:translateY(-3px);box-shadow:0 8px 20px #0006}
+.b1{background:linear-gradient(135deg,#4caf50,#2e7d32)}
+.b2{background:linear-gradient(135deg,#ff9800,#e65100)}
+.b3{background:linear-gradient(135deg,#9c27b0,#7b1fa2)}
+.b4{background:linear-gradient(135deg,#2196f3,#0d47a1)}
+.b5{background:linear-gradient(135deg,#00bcd4,#006064)}
+.b6{background:linear-gradient(135deg,#ff5722,#bf360c)}
+.b7{background:linear-gradient(135deg,#ff4081,#f50057)}
+.b8{background:linear-gradient(135deg,#f44336,#b71c1c)}
+.bl{font-size:12px;opacity:.9}
+.ki{background:rgba(255,255,255,.2);padding:3px 6px;border-radius:4px;font-size:10px;margin-top:2px}
+.rec{background:#dc35454d!important;border-color:#dc3545!important;animation:pulse 1.5s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 #dc3545b3}70%{box-shadow:0 0 0 15px #dc354500}100%{box-shadow:0 0 0 0 #dc354500}}
+.ins{background:rgba(255,255,255,.1);padding:15px;border-radius:12px;width:100%;margin-top:15px}
+.ins h3{color:#4caf50;margin:0 0 12px;font-size:16px}
+.ins ul{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr;gap:10px}
+.ins li{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:12px}
+.key{display:inline-block;background:rgba(255,255,255,.2);color:#fff;padding:2px 6px;border-radius:4px;margin-right:4px;font-weight:700;font-family:monospace}
+.empty{color:rgba(255,255,255,.5);font-style:italic;text-align:center;display:flex;align-items:center;justify-content:center;height:100%;font-size:36px}
+.cnt{position:absolute;top:10px;right:10px;background:#ff5722cc;color:#fff;padding:4px 8px;border-radius:50%;font-size:12px;min-width:20px;text-align:center}
+.notif{position:fixed;top:20px;right:20px;background:#2196f3e6;color:#fff;padding:12px 20px;border-radius:10px;z-index:1000;animation:si .3s ease,fo .3s ease 1.7s forwards;box-shadow:0 5px 15px #0006}
+@keyframes si{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fo{to{opacity:0}}
+.bubble-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2000;display:flex;align-items:center;justify-content:center}
+.bubble{background:#0f0;color:#000;border-radius:50%;width:200px;height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;box-shadow:0 0 40px #0f0;opacity:0;transform:scale(.5);transition:.3s;position:absolute;text-align:center}
+.bv{opacity:1;transform:scale(1)}
+.blayer{font-size:5rem;line-height:1}
+.btext{font-size:1.5rem;margin-top:5px}
+@media(max-width:1024px){.wi{min-width:250px}.wc,.empty,.et{font-size:28px}.btn{min-width:calc(25% - 8px)}}
+@media(max-width:600px){.w{overflow-x:auto}.wi{min-width:280px}.wc,.empty,.et{font-size:24px}.btn{min-width:calc(50% - 5px)}}
+</style>
+</head>
+<body>
+<div class="c">
+<h1>🎤 Diktálós v2 (Layer + WASD)</h1>
+<div class="s" id="s">🟢 Layer 1 - Várja a 8-as gombot</div>
+<div class="w">
+<div class="wi wi-l"><div class="wt">Bal ablak (szerkeszthető)</div><textarea id="l" class="et"></textarea></div>
+<div class="wi wi-r"><div class="wt">Jobb ablak - Tároló</div><div class="wc" id="r"><div class="empty">Itt gyűlnek a szövegek</div></div></div>
+</div>
+<div class="br">
+<button class="btn b1" onclick="b1()"><div>1️⃣</div><div class="bl">Bal→Jobb</div><div class="ki">1</div></button>
+<button class="btn b2" onclick="b2()"><div>2️⃣</div><div class="bl">Pont/?</div><div class="ki">2 (1-2x)</div></button>
+<button class="btn b3" onclick="b3()"><div>3️⃣</div><div class="bl">Visszaállítás</div><div class="ki">3</div></button>
+<button class="btn b4" onclick="b4()"><div>4️⃣</div><div class="bl">Felolvasás/Letöltés</div><div class="ki">4</div></button>
+<button class="btn b5" onclick="b5()"><div>5️⃣</div><div class="bl">Elválasztó</div><div class="ki">5</div></button>
+<button class="btn b6" onclick="b6()"><div>6️⃣</div><div class="bl">Suffix</div><div class="ki">6</div><div id="sc" class="cnt">1/12</div></button>
+<button class="btn b7" onclick="b7()"><div>7️⃣</div><div class="bl">Mentés/Másolás</div><div class="ki">7</div></button>
+<button class="btn b8" id="b8"><div>8️⃣</div><div class="bl">Felismerés</div><div class="ki">8</div></button>
+</div>
+<div class="ins"><h3>📋 Layer rendszer (0 gomb)</h3><ul>
+<li><span class="key">0</span> - Rétegváltás (1-3)</li>
+<li><span class="key">Layer 1</span> - Alap funkciók (1-8)</li>
+<li><span class="key">Layer 2 + 1</span> - Jobb ablak visszaállítása mentésből</li>
+<li><span class="key">WASD</span> - , ! * / (bármely layerben)</li>
+<li><span class="key">2</span> - 1x: pont, 2x: ?</li>
+<li><span class="key">9</span> - Ablak bezárása</li>
+<li><span class="key">0+9</span> - Oldal újratöltése</li>
+</ul></div>
+</div>
+<div class="bubble-container"><div class="bubble" id="bubble"><div class="blayer" id="blayer">1</div><div class="btext" id="btext">Első funkció</div></div></div>
+
+<script>
+// Konfiguráció
+let s=document.getElementById('s'),l=document.getElementById('l'),r=document.getElementById('r'),sc=document.getElementById('sc'),bubble=document.getElementById('bubble'),bl=document.getElementById('blayer'),bt=document.getElementById('btext');
+let rec=null,recOn=!1,lt='',rt='',lbp=0,l2=0,l3=0,l4=0,l6=0,l7=0,ss=0,ks=0,st=null,wlp=!1,dp=300,lpd=1e3;
+let layer=1,layerNames={1:'Első funkció',2:'Második funkció',3:'Harmadik funkció'},activeKeys={};
+const sfx=["Kérem az egész html kódokat végig.","A nagy script részt kérem vissza.","Kérek javascriptet.","aaa"];
+
+// Local storage mentés/betöltés (csak Layer 2+1-re)
+function saveToLS(){try{localStorage.setItem('diktalos_rt',rt)}catch(e){}}
+function loadFromLS(){try{let v=localStorage.getItem('diktalos_rt');if(v)rt=v;updR();s.textContent="📂 Jobb ablak visszaállítva";beepOk()}catch(e){}}
+
+// UI
+function updR(){if(rt.trim())r.innerHTML=`<div>${rt}</div>`;else r.innerHTML='<div class="empty">Itt gyűlnek a szövegek</div>';saveToLS()}
+function updL(){l.value=lt||""}
+function n(m){let d=document.createElement('div');d.className='notif';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2e3)}
+function copy(){navigator.clipboard.writeText(rt).then(()=>n("📋 Jobb ablak másolva!"))}
+function usc(){sc.textContent=`${ss+1}/${sfx.length}`}
+function showBubble(layer){bl.textContent=layer;bt.textContent=layerNames[layer];bubble.classList.add('bv');setTimeout(()=>bubble.classList.remove('bv'),1200)}
+
+// TTS fejlesztések - írásjelek felolvasása, szünetekkel
+function readWithPauses(t,v){
+ if(!t.trim())return;
+ let u=new SpeechSynthesisUtterance();
+ u.lang='hu-HU';u.volume=v;
+ let segments=[],current='';
+ for(let i=0;i<t.length;i++){
+  let c=t[i];
+  if(c===','||c==='.'||c==='?'||c==='!'){if(current){segments.push({text:current,type:'word'});current=''}segments.push({text:c,type:'punct'})}
+  else current+=c;
+ }
+ if(current)segments.push({text:current,type:'word'});
+ let idx=0;
+ function speakNext(){
+  if(idx>=segments.length){s.textContent="🟢 Készen áll";return}
+  let seg=segments[idx++];
+  if(seg.type==='punct'){
+   let punctText={'?':'kérdőjel','!':'felkiáltójel','.':'pont',',':'vessző'}[seg.text]||seg.text;
+   let pu=new SpeechSynthesisUtterance(punctText);pu.lang='hu-HU';pu.volume=v;
+   pu.onend=()=>{setTimeout(speakNext,seg.text===','?500:1000)};
+   speechSynthesis.speak(pu);
+  }else{
+   let wu=new SpeechSynthesisUtterance(seg.text);wu.lang='hu-HU';wu.volume=v;
+   wu.onend=()=>speakNext();
+   speechSynthesis.speak(wu);
+  }
+ }
+ s.textContent="🔊 Visszaolvasás...";speakNext();
+}
+
+// Gomb funkciók (Layer 1 - alap funkciók)
+function b1(){lt=l.value.trim();if(!lt){s.textContent="📝 Nincs szöveg!";beepWarn();return}rt=rt.trim()?rt+' '+lt:lt;updR();lt='';updL();copy();s.textContent="✅ Bal→Jobb + másolva";beepOk()}
+function b2(){let n=Date.now(),d=(n-l2)<dp;lt=l.value.trim();if(!lt){beepWarn();l2=n;return}lt=lt.replace(/[.?!]$/,'');lt+=d?'?':'.';updL();s.textContent=d?"❓ Kérdőjel":"🔵 Pont";d?beepDel():beepOk();l2=n}
+function b3(){stopRec();stopAll();lt='';rt='';updL();updR();ss=0;usc();s.textContent="🔄 Visszaállítva";beepDel()}
+function b4(){let n=Date.now(),d=(n-l4)<dp;if(!rt.trim()){s.textContent="📝 Nincs szöveg!";beepWarn();l4=n;return}if(d){download(rt,gW(rt,3)+'.txt');s.textContent="💾 Letöltve";beepOk()}else{readWithPauses(rt,.8);s.textContent="🔊 Felolvasva (szünetekkel)";beepOk()}l4=n}
+function b5(){rt=rt.trim()?rt+'\n\n':'\n\n';updR();copy();s.textContent="📎 Elválasztó + másolva";beepOk()}
+function b6(){let n=Date.now();if((n-l6)<dp){beepSpec();l6=n;return}stopAll();if(ss>=sfx.length)ss=0;lt=sfx[ss];readWithPauses(lt,.8);updL();usc();s.textContent=`✅ Suffix ${ss+1}/${sfx.length}`;beepOk();ss=(ss+1)%sfx.length;l6=n}
+function b7(){let n=Date.now(),d=(n-l7)<dp;if(!rt.trim()){beepWarn();l7=n;return}let fs=extractFirstTwo(rt),fn=fs?cleanFilename(fs)+'.txt':"diktalas.txt";if(d){navigator.clipboard.writeText(rt).then(()=>n("📋 Vágólapra másolva!"));s.textContent="📋 Másolva";beepOk()}else{download(rt,fn);s.textContent=`💾 Mentve: ${fn}`;beepOk();readWithPauses("Mentés sikeres",.8)}l7=n}
+function b8s(){let n=Date.now(),d=(n-lbp)<dp;lbp=n;if(d){stopRec();stopAll();lt='';updL();setTimeout(startRec,100);s.textContent="🔄 Törölve+újraindítás";beepDel();return}if(recOn){stopRec();lt=l.value.trim();if(lt){readWithPauses(lt,.8);s.textContent="🔊 Leállítva+felolvasva"}else s.textContent="⏸️ Leállítva";beepOk()}else{startRec();s.textContent="🎤 Felismerés indítva";beepOk()}}
+function b8kd(){if(!ks){ks=Date.now();wlp=!1;st=setTimeout(()=>{wlp=!0;lt='';updL();recOn&&stopRec();setTimeout(startRec,100);s.textContent="🔄 Hosszú nyomás";beepDel();lbp=Date.now()},lpd)}}
+function b8ku(){let n=Date.now();if(st){clearTimeout(st);st=null}if(ks&&!wlp&&(n-ks)<lpd)b8s();ks=0}
+
+// WASD karakterek beszúrása
+function addCharToLeft(c){lt=l.value.trim();lt+=c;updL();s.textContent=`➕ Karakter: ${c}`;beepOk()}
+
+// Layer kezelés
+function switchLayer(){layer=layer%3+1;showBubble(layer);s.textContent=`🟢 Layer ${layer} - ${layerNames[layer]}`;speakPlain(`${layer}-es funkció`)}
+function speakPlain(t){let u=new SpeechSynthesisUtterance(t);u.lang='hu-HU';speechSynthesis.cancel();speechSynthesis.speak(u)}
+
+// Layer specifikus funkciók (CSAK a nem üres funkciók szólnak)
+function handleLayerKey(key){
+ if(activeKeys['0']&&key==='9'){speakPlain("Oldal újratöltése");setTimeout(()=>location.reload(),500);return}
+ if(key==='9'){window.close();return}
+ 
+ // WASD kezelés - minden layerben működik
+ if(key==='w'){addCharToLeft(',');return}
+ if(key==='s'){addCharToLeft('!');return}
+ if(key==='a'){addCharToLeft('*');return}
+ if(key==='d'){addCharToLeft('/');return}
+ 
+ // Layer 1 - Alap funkciók (már a gombok kezelik)
+ if(layer===1){return}
+ 
+ // Layer 2 - Speciális funkciók
+ if(layer===2&&key==='1'){loadFromLS();return}
+ 
+ // Layer 3 - Speciális funkciók
+ if(layer===3&&key==='1'){let d=new Date();speakPlain(`${d.getHours()} óra ${d.getMinutes()} perc ${d.getSeconds()} másodperc`);return}
+}
+
+// Segédfüggvények
+function stopAll(){speechSynthesis.cancel()}
+function stopRec(){rec&&rec.stop();recOn=!1;s.classList.remove('rec')}
+function startRec(){if(!('webkitSpeechRecognition'in window)&&!('SpeechRecognition'in window))return!1;let SR=window.SpeechRecognition||window.webkitSpeechRecognition;rec=new SR;rec.lang='hu-HU';rec.interimResults=!1;rec.continuous=!0;rec.onstart=()=>{recOn=!0;s.textContent="🎤 Hangfelismerés...";s.classList.add('rec')};rec.onresult=(e)=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal){let t=e.results[i][0].transcript.trim();if(t)lt=lt?lt+' '+t:t,updL()}};rec.onerror=()=>stopRec();rec.onend=()=>{recOn&&rec&&setTimeout(()=>{try{rec.start()}catch{}},100)};try{rec.start()}catch{}}
+function extractFirstTwo(t){let m=t.match(/[^.!?]+[.!?]+/g);return m?m.slice(0,2).join(' ').trim():t.trim().split(/\s+/).slice(0,3).join(' ')}
+function cleanFilename(t){let d={'á':'a','é':'e','í':'i','ó':'o','ö':'o','ő':'o','ú':'u','ü':'u','ű':'u','Á':'A','É':'E','Í':'I','Ó':'O','Ö':'O','Ő':'O','Ú':'U','Ü':'U','Ű':'U'};return t.replace(/[áéíóöőúüűÁÉÍÓÖŐÚÜŰ]/g,m=>d[m]||m).replace(/[^a-zA-Z0-9\s]/g,' ').replace(/\s+/g,' ').trim().slice(0,50)}
+function gW(t,c){let w=t.split(/\s+/).filter(w=>w.length>2),sw=[];for(let i=0;i<c;i++){if(w.length){let wi=Math.floor(Math.random()*w.length),cl=w[wi].replace(/[^\w]/g,'');cl.length&&sw.push(cl)}}while(sw.length<c)sw.push('szoveg'+(sw.length+1));return sw.join('_')}
+function download(t,f){let b=new Blob([t],{type:'text/plain'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=f;a.click();setTimeout(()=>{a.remove();URL.revokeObjectURL(u)},100)}
+function beep(f,d,v,t){try{let a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(a.destination);let n=a.currentTime;g.gain.setValueAtTime(.001,n);g.gain.exponentialRampToValueAtTime(v,n+.01);g.gain.exponentialRampToValueAtTime(.001,n+d/1e3);o.start(n);o.stop(n+d/1e3)}catch{}}
+let beepOk=()=>beep(600,150,.1,'sine'),beepDel=()=>beep(400,200,.1,'sawtooth'),beepWarn=()=>beep(300,150,.1,'square'),beepSpec=()=>{try{let a=new AudioContext(),o1=a.createOscillator(),o2=a.createOscillator(),g=a.createGain();o1.frequency.value=600;o2.frequency.value=800;g.gain.value=.1;o1.connect(g);o2.connect(g);g.connect(a.destination);let n=a.currentTime;g.gain.setValueAtTime(.001,n);g.gain.exponentialRampToValueAtTime(.1,n+.01);g.gain.exponentialRampToValueAtTime(.001,n+.3);o1.start(n);o2.start(n);o1.stop(n+.3);o2.stop(n+.3)}catch{}};
+
+// Eseménykezelők
+r.addEventListener('click',()=>{rt.trim()?copy():beepWarn()});
+l.addEventListener('input',()=>{lt=l.value});
+document.addEventListener('keydown',(e)=>{
+ let a=document.activeElement,i=a.tagName==='INPUT'||a.tagName==='TEXTAREA';
+ if(a.id==='l'&&e.key!=='Escape')return;if(i&&a.id!=='l')return;
+ activeKeys[e.key]=!0;
+ if(e.key==='0')return;
+ 
+ // Minden billentyűt továbbítunk a layer kezelőnek (kivéve a 0-t)
+ if((e.key>='1'&&e.key<='9')||e.key==='w'||e.key==='W'||e.key==='s'||e.key==='S'||e.key==='a'||e.key==='A'||e.key==='d'||e.key==='D'){
+  e.preventDefault();
+  handleLayerKey(e.key.toLowerCase());
+ }
+ 
+ // Layer 1-ben a gombok közvetlenül is meghívódnak
+ if(layer===1){
+  switch(e.key){
+   case'1':e.preventDefault();b1();break;case'2':e.preventDefault();b2();break;case'3':e.preventDefault();b3();break;
+   case'4':e.preventDefault();b4();break;case'5':e.preventDefault();b5();break;case'6':e.preventDefault();b6();break;
+   case'7':e.preventDefault();b7();break;case'8':e.preventDefault();b8kd();break;
+   case'Escape':e.preventDefault();stopRec();stopAll();s.textContent="🛑 Vészleállítás";beepWarn();break;
+  }
+ }
+});
+document.addEventListener('keyup',(e)=>{
+ let a=document.activeElement,i=a.tagName==='INPUT'||a.tagName==='TEXTAREA';
+ if(a.id==='l'&&e.key!=='Escape')return;if(i&&a.id!=='l')return;
+ if(e.key==='0'&&!activeKeys['9']){e.preventDefault();switchLayer()}
+ if(e.key==='8'){e.preventDefault();b8ku()}
+ delete activeKeys[e.key];
+});
+
+// Inicializálás - NINCS loadFromLS() hívás!
+document.addEventListener('DOMContentLoaded',()=>{
+ let b8b=document.getElementById('b8');
+ b8b.addEventListener('mousedown',b8kd);b8b.addEventListener('mouseup',b8ku);b8b.addEventListener('mouseleave',()=>{st&&clearTimeout(st);st=null;ks=0});
+ b8b.addEventListener('touchstart',b8kd);b8b.addEventListener('touchend',b8ku);b8b.addEventListener('touchcancel',()=>{st&&clearTimeout(st);st=null;ks=0});
+ b8b.addEventListener('click',b8s);
+ usc();s.textContent=`🟢 Layer 1 - ${layerNames[1]}`;
+});
+</script>
+</body>
+</html>
