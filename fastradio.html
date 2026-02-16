@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rádió lejátszó + Felvétel</title>
+  <script src="./js/universal 1.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js"></script>
+
+  <style>
+    :root {
+      --miui-green: #00C853;
+      --miui-green-dark: #00A844;
+      --miui-green-light: #5EFC82;
+      --hyperos-glow: 0 0 15px rgba(0, 200, 83, 0.4);
+      --android-dark: #0F0F0F;
+      --android-surface: #1A1A1A;
+      --android-card: #212121;
+      --android-text: #E0E0E0;
+      --android-text-secondary: #AAAAAA;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 100%);
+      color: var(--android-text);
+      min-height: 100vh;
+      padding: 20px;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 20% 80%, rgba(0, 200, 83, 0.1) 0%, transparent 70%),
+                  radial-gradient(circle at 80% 20%, rgba(0, 200, 83, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Fő gombok stílusai */
+    button {
+      font-size: 1.1rem;
+      padding: 14px 28px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark));
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-bottom: 16px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--hyperos-glow), 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.6s;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 0 20px rgba(0, 200, 83, 0.6), 0 6px 25px rgba(0, 0, 0, 0.4);
+      background: linear-gradient(145deg, var(--miui-green-light), var(--miui-green));
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+      transition-duration: 0.1s;
+    }
+
+    button:disabled {
+      background: linear-gradient(145deg, #2A2A2A, #1F1F1F);
+      color: var(--android-text-secondary);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none !important;
+    }
+
+    /* Ikonos gombok */
+    button[aria-label*="Opciók"] {
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button[aria-label*="Opciók"]::before {
+      content: '⚙️';
+      font-size: 1.2rem;
+    }
+
+    /* Status üzenet */
+    #status {
+      font-size: 1.1rem;
+      margin: 20px 0;
+      min-height: 1.5em;
+      text-align: center;
+      max-width: 90vw;
+      word-break: break-word;
+      padding: 12px;
+      background: var(--android-card);
+      border-radius: 10px;
+      border-left: 4px solid var(--miui-green);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Felvétel vezérlők */
+    #recordControls {
+      display: flex;
+      gap: 20px;
+      margin: 30px 0;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    #recordControls button {
+      width: 180px;
+      height: 70px;
+      font-size: 1.2rem;
+      border-radius: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s ease;
+    }
+
+    #startRecordBtn {
+      background: linear-gradient(145deg, #FF5252, #D32F2F);
+      box-shadow: 0 0 20px rgba(255, 82, 82, 0.4);
+    }
+
+    #startRecordBtn:hover:not(:disabled) {
+      background: linear-gradient(145deg, #FF867F, #FF5252);
+      box-shadow: 0 0 25px rgba(255, 82, 82, 0.6);
+    }
+
+    #stopRecordBtn {
+      background: linear-gradient(145deg, #FF9800, #F57C00);
+      box-shadow: 0 0 20px rgba(255, 152, 0, 0.4);
+    }
+
+    #stopRecordBtn:hover:not(:disabled) {
+      background: linear-gradient(145deg, #FFB74D, #FF9800);
+      box-shadow: 0 0 25px rgba(255, 152, 0, 0.6);
+    }
+
+    /* Hangerő vezérlő */
+    #volumeControlContainer {
+      position: fixed;
+      top: 200px;
+      right: 30px;
+      z-index: 10000;
+      background: linear-gradient(145deg, #1E1E1E, #2A2A2A);
+      color: var(--android-text);
+      padding: 20px;
+      border-radius: 20px;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), var(--hyperos-glow);
+      border: 1px solid rgba(0, 200, 83, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    #volumeControlContainer button {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: none;
+      color: white;
+      font-size: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, var(--android-card), #2A2A2A);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    #volumeControlContainer button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 200, 83, 0.3);
+    }
+
+    #volumeMinusBtn { background: linear-gradient(145deg, #FF5252, #D32F2F); }
+    #volumePlusBtn { background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark)); }
+
+    #volumeDisplay {
+      min-width: 70px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.3rem;
+      color: var(--miui-green-light);
+      text-shadow: 0 0 10px rgba(0, 200, 83, 0.3);
+    }
+
+    /* Letöltési link */
+    #downloadLink {
+      position: fixed;
+      top: 140px;
+      right: 30px;
+      z-index: 10000;
+      background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark));
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-family: sans-serif;
+      font-size: 1rem;
+      display: none;
+      box-shadow: var(--hyperos-glow), 0 6px 20px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 200, 83, 0.3);
+    }
+
+    #downloadLink:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 25px rgba(0, 200, 83, 0.6), 0 8px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Rádiólista konténer */
+    #radioListContainer {
+      position: fixed;
+      top: 300px;
+      left: 30px;
+      width: 750px;
+      height: 580px;
+      background: linear-gradient(145deg, #1A1A1A, #2A2A2A);
+      color: white;
+      padding: 20px;
+      border-radius: 20px;
+      z-index: 10000;
+      box-sizing: border-box;
+      overflow: hidden;
+      border: 1px solid rgba(0, 200, 83, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), var(--hyperos-glow);
+      backdrop-filter: blur(10px);
+    }
+
+    /* Rádiólista grid */
+    #radioNames {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-rows: minmax(2.5em, auto);
+      gap: 8px 16px;
+      border: 1px solid rgba(0, 200, 83, 0.3);
+      padding: 15px;
+      background: rgba(25, 25, 25, 0.8);
+      border-radius: 12px;
+      margin-top: 15px;
+      max-height: 480px;
+      overflow-y: auto;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 14px;
+      color: var(--android-text);
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    #radioNames::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #radioNames::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+
+    #radioNames::-webkit-scrollbar-thumb {
+      background: linear-gradient(var(--miui-green), var(--miui-green-dark));
+      border-radius: 4px;
+    }
+
+    #radioNames > div {
+      border: 1px solid rgba(0, 200, 83, 0.4);
+      padding: 10px 12px;
+      border-radius: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      user-select: none;
+      background: rgba(40, 40, 40, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #radioNames > div::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 200, 83, 0.1), transparent);
+      transition: left 0.5s;
+    }
+
+    #radioNames > div:hover {
+      background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark));
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3);
+      border-color: var(--miui-green-light);
+    }
+
+    #radioNames > div:hover::before {
+      left: 100%;
+    }
+
+    .highlight {
+      background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark)) !important;
+      color: white !important;
+      font-weight: bold;
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: default;
+      animation: pulse 2s infinite;
+      box-shadow: 0 0 20px rgba(0, 200, 83, 0.4);
+      border-color: var(--miui-green-light) !important;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(0, 200, 83, 0.4); }
+      50% { box-shadow: 0 0 30px rgba(0, 200, 83, 0.7); }
+    }
+
+    /* Oszlopváltó gomb */
+    #toggleGridBtn {
+      margin-bottom: 15px;
+      font-size: 0.95rem;
+      padding: 8px 16px;
+      background: linear-gradient(145deg, #2A2A2A, #1E1E1E);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    #toggleGridBtn:hover {
+      background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark));
+    }
+
+    /* Options panel */
+    #optionsPanel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 100%);
+      backdrop-filter: blur(20px);
+      overflow-y: auto;
+      z-index: 15000;
+      display: none;
+      padding: 40px;
+      box-sizing: border-box;
+      color: white;
+      animation: panelSlide 0.3s ease-out;
+    }
+
+    @keyframes panelSlide {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    #optionsPanel::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 30% 30%, rgba(0, 200, 83, 0.1) 0%, transparent 60%),
+                  radial-gradient(circle at 70% 70%, rgba(0, 200, 83, 0.05) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    #optionsPanel h2 {
+      color: var(--miui-green-light);
+      margin-bottom: 25px;
+      font-size: 1.8rem;
+      text-shadow: 0 0 10px rgba(0, 200, 83, 0.3);
+      border-bottom: 2px solid var(--miui-green);
+      padding-bottom: 10px;
+    }
+
+    #optionsPanelCloseBtn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(145deg, #FF5252, #D32F2F);
+      border: none;
+      color: white;
+      font-size: 1.8rem;
+      font-weight: bold;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(255, 82, 82, 0.4);
+      z-index: 15001;
+    }
+
+    #optionsPanelCloseBtn:hover {
+      transform: rotate(90deg) scale(1.1);
+      box-shadow: 0 6px 25px rgba(255, 82, 82, 0.6);
+    }
+
+    #openOptionsBtn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 16000;
+      background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark));
+      border: none;
+      color: white;
+      padding: 12px 20px;
+      font-size: 1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: var(--hyperos-glow), 0 6px 20px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #openOptionsBtn:hover {
+      transform: translateY(-2px) rotate(15deg);
+      box-shadow: 0 0 25px rgba(0, 200, 83, 0.6), 0 8px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Automation kontrollok */
+    .automation-controls {
+      background: linear-gradient(145deg, #212121, #2A2A2A);
+      padding: 25px;
+      border-radius: 16px;
+      margin: 30px 0;
+      border: 1px solid rgba(0, 200, 83, 0.2);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      color: var(--miui-green-light);
+      font-weight: 500;
+    }
+
+    .automation-input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 2px solid rgba(0, 200, 83, 0.3);
+      background: rgba(0, 0, 0, 0.4);
+      color: white;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .automation-input:focus {
+      outline: none;
+      border-color: var(--miui-green);
+      box-shadow: 0 0 15px rgba(0, 200, 83, 0.3);
+    }
+
+    .automation-btn {
+      background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark)) !important;
+      width: 100%;
+      padding: 16px !important;
+      font-size: 1.1rem !important;
+      margin-top: 20px;
+    }
+
+    .status-message {
+      margin-top: 20px;
+      color: var(--miui-green-light);
+      font-size: 0.95rem;
+      text-align: center;
+      padding: 12px;
+      background: rgba(0, 200, 83, 0.1);
+      border-radius: 8px;
+      border-left: 4px solid var(--miui-green);
+    }
+
+    /* Egyedi stream kontrollok */
+    .custom-stream-controls {
+      background: linear-gradient(145deg, #212121, #2A2A2A);
+      padding: 25px;
+      border-radius: 16px;
+      margin: 30px 0;
+      border: 1px solid rgba(0, 200, 83, 0.2);
+    }
+
+    .custom-stream-controls input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 2px solid rgba(0, 200, 83, 0.3);
+      margin-bottom: 15px;
+      background: rgba(0, 0, 0, 0.4);
+      color: white;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .custom-stream-controls input:focus {
+      outline: none;
+      border-color: var(--miui-green);
+      box-shadow: 0 0 15px rgba(0, 200, 83, 0.3);
+    }
+
+    .custom-stream-controls button {
+      margin-bottom: 12px;
+      width: 100%;
+      background: linear-gradient(145deg, var(--android-card), #2A2A2A);
+    }
+
+    .custom-stream-controls button:hover:not(:disabled) {
+      background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark));
+    }
+
+    #clearInputBtn {
+      background: linear-gradient(145deg, #FF5252, #D32F2F) !important;
+      margin-top: 20px;
+    }
+
+    #clearInputBtn:hover {
+      background: linear-gradient(145deg, #FF867F, #FF5252) !important;
+    }
+
+    /* TTS Bubble Styles */
+    .tts-bubble {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(145deg, var(--miui-green), var(--miui-green-dark));
+      color: white;
+      padding: 20px 30px;
+      border-radius: 20px;
+      z-index: 20000;
+      font-size: 1.2rem;
+      text-align: center;
+      max-width: 80%;
+      box-shadow: 0 10px 40px rgba(0, 200, 83, 0.5), 0 0 30px rgba(0, 200, 83, 0.3);
+      animation: bubbleAppear 0.3s ease-out, bubbleDisappear 0.3s ease-in 2.7s;
+      pointer-events: none;
+      border: 2px solid var(--miui-green-light);
+      backdrop-filter: blur(10px);
+    }
+
+    @keyframes bubbleAppear {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    @keyframes bubbleDisappear {
+      from {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+    }
+
+    /* Reszponzív design */
+    @media (max-width: 1200px) {
+      #radioListContainer {
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 100%;
+        height: 500px;
+        margin: 30px 0;
+      }
+      
+      #volumeControlContainer {
+        position: fixed;
+        bottom: 30px;
+        top: auto;
+        right: 30px;
+      }
+      
+      #downloadLink {
+        position: fixed;
+        bottom: 120px;
+        top: auto;
+        right: 30px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 15px;
+      }
+      
+      #radioNames {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      #recordControls {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      #recordControls button {
+        width: 100%;
+        max-width: 300px;
+      }
+      
+      #optionsPanel {
+        padding: 20px;
+      }
+      
+      .tts-bubble {
+        font-size: 1rem;
+        padding: 15px 20px;
+        max-width: 90%;
+      }
+    }
+
+    /* Animációk */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    button, #status, #radioListContainer, .automation-controls, .custom-stream-controls {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Elrendezés javítások */
+    .main-controls {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .main-controls button {
+      min-width: 220px;
+    }
+
+    /* Rádió információk */
+    #currentRadioInfo {
+      background: linear-gradient(145deg, #1A1A1A, #2A2A2A);
+      padding: 15px;
+      border-radius: 12px;
+      margin: 20px 0;
+      border-left: 4px solid var(--miui-green);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      display: none;
+    }
+
+    #currentRadioInfo.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+
+<button id="openOptionsBtn" aria-label="Opciók megnyitása">Beállítások</button>
+
+<div id="optionsPanel" role="dialog" aria-modal="true" aria-labelledby="optionsPanelTitle">
+  <button id="optionsPanelCloseBtn" aria-label="Opciók bezárása">&times;</button>
+  
+  <h2 id="optionsPanelTitle">Automatizálás</h2>
+  <div class="automation-controls">
+    <div class="input-group">
+      <label>Lejátszási idő (perc):</label>
+      <input type="number" id="playDuration" min="1" value="1" class="automation-input">
+    </div>
+    
+    <div class="input-group">
+      <label>Szünet időtartama (perc):</label>
+      <input type="number" id="pauseDuration" min="1" value="1" class="automation-input">
+    </div>
+    
+    <button id="toggleAutomationBtn" class="automation-btn">Automatizálás indítása</button>
+    <div id="automationStatus" class="status-message"></div>
+  </div>
+
+  <h2>Egyedi stream indítása</h2>
+  <div class="custom-stream-controls">
+    <input type="text" id="streamUrl" placeholder="Adja meg a rádióállomás URL-jét">
+    
+    <button id="startStreamBtn">Indítás</button>
+    <button id="pasteClipboardBtn">PasteClipboard & Indítás</button>
+    <button id="openStreamUrlLinkBtn">streamurl.link Megnyitása</button>
+    
+    <button id="openInternetRadioBtn">Internet-Radio.com Megnyitása</button>
+
+    <div id="radioContainer" style="margin-top: 15px;"></div>
+  </div>
+
+  <button id="clearInputBtn">Clear</button>
+
+  <div style="margin-top: 40px; padding: 20px; background: rgba(0, 200, 83, 0.05); border-radius: 12px; border: 1px solid rgba(0, 200, 83, 0.2);">
+    <h3 style="color: var(--miui-green-light); margin-bottom: 15px;">Gyorsbillentyűk</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; color: var(--android-text-secondary);">
+      <div><strong>1</strong> - Véletlenszerű rádió</div>
+      <div><strong>2</strong> - Felvétel indítása</div>
+      <div><strong>3</strong> - Állapot felolvasása</div>
+      <div><strong>5</strong> - Rádió leállítása</div>
+      <div><strong>6</strong> - Rádió mentése</div>
+      <div><strong>8</strong> - Rádió betöltése</div>
+      <div><strong>9</strong> - Felvétel leállítása</div>
+      <div><strong>9+0</strong> - Oldal újratöltése</div>
+      <div><strong>W</strong> - Hangerő növelése (+5%)</div>
+      <div><strong>S</strong> - Hangerő csökkentése (-5%)</div>
+    </div>
+  </div>
+</div>
+
+<div class="main-controls">
+  <button id="playRadioButton">🎲 Véletlenszerű rádió</button>
+  <button id="stopRadioButton" disabled>⏹️ Leállítás</button>
+</div>
+
+<div id="status">Kész. Válassz egy rádióállomást!</div>
+
+<div id="recordControls">
+  <button id="startRecordBtn">🔴 Felvétel indítása</button>
+  <button id="stopRecordBtn" disabled>⏹️ Felvétel leállítása</button>
+</div>
+
+<div id="volumeControlContainer" style="display:none;">
+  <button id="volumeMinusBtn">-</button>
+  <span id="volumeDisplay">40%</span>
+  <button id="volumePlusBtn" class="plus">+</button>
+</div>
+
+<div id="radioListContainer">
+  <button id="toggleGridBtn" style="margin-bottom:15px;">2 oszlop</button>
+  <strong style="font-size: 1.2rem; color: var(--miui-green-light);">📻 Rádióadók</strong>
+  <div id="radioNames"></div>
+</div>
+
+<a id="downloadLink" href="#" download>💾 Felvétel letöltése</a>
+
+<script>
+  // TTS bubble function
+  function showTTSBubble(message, isError = false) {
+    // Remove existing bubble if any
+    const existingBubble = document.querySelector('.tts-bubble');
+    if (existingBubble) {
+      existingBubble.remove();
+    }
+    
+    // Create new bubble
+    const bubble = document.createElement('div');
+    bubble.className = 'tts-bubble';
+    bubble.textContent = message;
+    
+    if (isError) {
+      bubble.style.background = 'linear-gradient(145deg, #FF5252, #D32F2F)';
+      bubble.style.borderColor = '#FF867F';
+    }
+    
+    document.body.appendChild(bubble);
+    
+    // Remove bubble after animation completes
+    setTimeout(() => {
+      if (bubble.parentNode) {
+        bubble.parentNode.removeChild(bubble);
+      }
+    }, 3000);
+  }
+  
+  // TTS announcement function
+  function ttsAnnounce(message, isError = false) {
+    // Show visual bubble
+    showTTSBubble(message, isError);
+    
+    // Speak the message
+    readUniversal(message, 'hu-HU');
+  }
+
+  const radios = [
+    { name: 'LWR Comedy', url: 'https://lwrcomedy-zaklwr10.radioca.st/stream' },
+    { name: 'SciFi Old Time Radio', url: 'http://s1.voscast.com:8652/stream' },
+    { name: 'NoLife Radio Video Game Music', url: 'http://listen.nolife-radio.com/stream' },
+    { name: 'Rádio Circuito Mix', url: 'http://162.220.58.242:8012/stream/1/' },
+    { name: 'World Revolutions by WorldFusionRadio.com', url: 'http://51.255.235.165:5366/stream/1/' },
+    { name: 'Spectrum Country', url: 'http://51.255.235.165:5184/stream/1/' },
+    { name: 'psyradio', url: 'http://komplex2.psyradio.org:8020/stream/1/' },
+    { name: '181 FM Comedy', url: 'http://listen.181fm.com/181-comedy_128k.mp3' },
+    { name: 'Asura Britcom', url: 'https://cast2.asurahosting.com/proxy/britcom1/stream' },
+    { name: 'Buddha Beach', url: 'https://radio4.vip-radios.fm:18054/stream-128kmp3-BuddhaBeach' },
+    { name: 'Chilloutzone', url: 'https://chilloutzone.stream.laut.fm/chilloutzone' },
+    { name: 'Sala London old', url: 'http://salalondon.ddns.net:8002/;stream.mp3' },
+    { name: 'Sala London', url: 'https://solid55.streamupsolutions.com/proxy/cfyzzdah/stream' },
+    { name: '0nlineradio Chillout', url: 'https://stream.0nlineradio.com/chillout' },
+    { name: 'Mercy Radio Kabare', url: 'http://stream.mercyradio.eu/kabare.mp3' },
+    { name: 'VIBE FM', url: 'https://streaming.silvacast.com/VIBEFM.mp3' },
+    { name: 'Sex-High Rautemusik', url: 'https://sex-high.rautemusik.fm/' },
+    { name: 'InfoStart', url: 'https://stream.infostart.hu/stream' },
+    { name: 'Plusfm - Paris France', url: 'https://radio5.pro-fhi.net:19041/stream/1/' },
+    { name: 'AIS SA2', url: 'https://ais-sa2.cdnstream1.com/1373_128' },
+    { name: 'Kathy TorontoCast', url: 'https://kathy.torontocast.com:1825/stream' },
+    { name: 'Dawnshadow Radio', url: 'http://radio.dawnshadow.se:8000/stream' },
+    { name: 'RCS Stream', url: 'https://stream.rcs.revma.com/zfad8vm4srhvv.mp3' },
+    { name: 'RTL Radio EDM', url: 'http://stream.rtlradio.de/plusedm/mp3-192/' },
+    { name: '0n Electro', url: 'https://0n-electro.radionetz.de/0n-electro.mp3' },
+    { name: 'JKing Stream', url: 'http://jking.cdnstream1.com/b22139_128mp3' },
+    { name: 'Wandering Sheep Christian Jazz', url: 'http://radio.wanderingsheep.tv:8021/christianjazz' },
+    { name: 'Yoga Chill', url: 'https://radio4.vip-radios.fm:18027/stream-128kmp3-YogaChill' },
+    { name: 'Chilltrax', url: 'https://streamssl.chilltrax.com/index.html' },
+    { name: 'Movie Dance', url: 'https://moviedance.stream.laut.fm/moviedance' },
+    { name: 'Space Travel Radio', url: 'https://spacetravelradio.de:2893/stream/2/' },
+    { name: 'Nature Rex', url: 'https://nature-rex.radioca.st/stream' },
+    { name: 'hyperadio ru', url: 'http://hyperadio.ru:8000/live' },
+    { name: 'Ambient Art Sound', url: 'https://ambientartsound.skydesignltd.com:8000/radio.mp3' },
+    { name: 'Zeno FM', url: 'https://stream.zeno.fm/00rt0rdm7k8uv' },
+    { name: 'Jazzy.hu', url: 'https://jazzy.hu/jazzy.mp3' },
+    { name: 'PoolWebwork', url: 'https://radios.poolwebwork.com.br/8020/stream' }
+  ];
+
+  function encodeMp3FromAudioBuffer(audioBuffer) {
+    const numChannels = audioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const mp3Encoder = new lamejs.Mp3Encoder(numChannels, sampleRate, 128);
+    
+    const samplesLeft = audioBuffer.getChannelData(0);
+    const samplesRight = numChannels > 1 ? audioBuffer.getChannelData(1) : null;
+    const sampleBlockSize = 1152;
+    const mp3Data = [];
+    
+    function floatTo16BitPCM(floatSamples) {
+      const output = new Int16Array(floatSamples.length);
+      for (let i = 0; i < floatSamples.length; i++) {
+        let s = Math.max(-1, Math.min(1, floatSamples[i]));
+        output[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      return output;
+    }
+    
+    for (let i = 0; i < samplesLeft.length; i += sampleBlockSize) {
+      const leftChunk = samplesLeft.subarray(i, i + sampleBlockSize);
+      let mp3buf;
+      if (numChannels === 2 && samplesRight) {
+        const rightChunk = samplesRight.subarray(i, i + sampleBlockSize);
+        mp3buf = mp3Encoder.encodeBuffer(
+          floatTo16BitPCM(leftChunk),
+          floatTo16BitPCM(rightChunk)
+        );
+      } else {
+        mp3buf = mp3Encoder.encodeBuffer(floatTo16BitPCM(leftChunk));
+      }
+      if (mp3buf.length > 0) mp3Data.push(mp3buf);
+    }
+    
+    const endBuf = mp3Encoder.flush();
+    if (endBuf.length > 0) mp3Data.push(endBuf);
+    
+    return new Blob(mp3Data, { type: 'audio/mp3' });
+  }
+  
+  function getFormattedFileName(radioName) {
+    const cleanName = radioName
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9-_]/g, '')
+      .substring(0, 30);
+    
+    const now = new Date();
+    const pad = n => n.toString().padStart(2, '0');
+    const ms = now.getMilliseconds();
+    const tenths = Math.floor(ms / 100);
+    
+    return `${cleanName}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}-${tenths}`;
+  }
+  
+  let radioAudio = null;
+  let audioContext = null;
+  let sourceNode = null;
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let currentVolume = 40; // Alapértelmezett hangerő 40%-ra állítva
+  let currentRadio = null;
+  
+  const playBtn = document.getElementById('playRadioButton');
+  const stopBtn = document.getElementById('stopRadioButton');
+  const statusDiv = document.getElementById('status');
+  const startRecordBtn = document.getElementById('startRecordBtn');
+  const stopRecordBtn = document.getElementById('stopRecordBtn');
+  const downloadLink = document.getElementById('downloadLink');
+  const volumeControlContainer = document.getElementById('volumeControlContainer');
+  const volumeMinusBtn = document.getElementById('volumeMinusBtn');
+  const volumePlusBtn = document.getElementById('volumePlusBtn');
+  const volumeDisplay = document.getElementById('volumeDisplay');
+  const radioNamesDiv = document.getElementById('radioNames');
+  const toggleGridBtn = document.getElementById('toggleGridBtn');
+  
+  const columnsOptions = [1, 2, 3, 4];
+  let currentColumnsIndex = 3;
+  
+  toggleGridBtn.addEventListener('click', () => {
+    currentColumnsIndex = (currentColumnsIndex + 1) % columnsOptions.length;
+    const cols = columnsOptions[currentColumnsIndex];
+    radioNamesDiv.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    toggleGridBtn.textContent = `${cols} oszlop`;
+  });
+  
+  function renderRadioList(currentName) {
+    const itemsPerColumn = 10;
+    const columns = Math.ceil(radios.length / itemsPerColumn);
+    const cols = Array.from({ length: columns }, () => []);
+    
+    radios.forEach((radio, index) => {
+      const colIndex = Math.floor(index / itemsPerColumn);
+      cols[colIndex].push(radio);
+    });
+    
+    let html = '';
+    for (let row = 0; row < itemsPerColumn; row++) {
+      for (let col = 0; col < columns; col++) {
+        const radio = cols[col][row];
+        if (radio) {
+          if (radio.name === currentName) {
+            html += `<div class="highlight" data-radio-index="${radios.indexOf(radio)}">${radio.name}</div>`;
+          } else {
+            html += `<div data-radio-index="${radios.indexOf(radio)}">${radio.name}</div>`;
+          }
+        } else {
+          html += `<div></div>`;
+        }
+      }
+    }
+    
+    radioNamesDiv.innerHTML = html;
+    
+    const radioDivs = radioNamesDiv.querySelectorAll('div[data-radio-index]');
+    radioDivs.forEach(div => {
+      div.addEventListener('click', () => {
+        const index = parseInt(div.getAttribute('data-radio-index'), 10);
+        if (!isNaN(index)) {
+          playRadio(radios[index]);
+        }
+      });
+    });
+  }
+  
+  function updateStatus(msg, isError = false) {
+    statusDiv.textContent = msg;
+    statusDiv.style.color = isError ? '#ff5555' : '#aaffaa';
+    statusDiv.style.borderLeftColor = isError ? '#ff5555' : 'var(--miui-green)';
+  }
+  
+  function updateVolumeDisplay() {
+    volumeDisplay.textContent = currentVolume + '%';
+    if (gainNode) {
+      gainNode.gain.setValueAtTime(currentVolume / 100, audioContext.currentTime);
+    } else if (radioAudio) {
+      radioAudio.volume = currentVolume / 100;
+    }
+  }
+  
+  let gainNode = null;
+  
+  function playRadio(radio) {
+    if (radioAudio) {
+      fadeOutRadio(() => {
+        startNewRadio(radio);
+      });
+    } else {
+      startNewRadio(radio);
+    }
+  }
+  
+  function startNewRadio(radio) {
+    currentRadio = radio;
+    
+    if (audioContext) {
+      audioContext.close();
+    }
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    radioAudio = new Audio(radio.url);
+    radioAudio.crossOrigin = "anonymous";
+    
+    sourceNode = audioContext.createMediaElementSource(radioAudio);
+    gainNode = audioContext.createGain();
+    gainNode.gain.value = currentVolume / 100; // Beállítjuk az alapértelmezett 40%-ot
+    
+    sourceNode.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    radioAudio.play().then(() => {
+      gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+      gainNode.gain.setValueAtTime(currentVolume / 100, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(currentVolume / 100, audioContext.currentTime + 2);
+      
+      updateStatus(`🎵 Lejátszás: ${radio.name}`);
+      stopBtn.disabled = false;
+      startRecordBtn.disabled = false;
+      volumeControlContainer.style.display = 'flex';
+      renderRadioList(radio.name);
+    }).catch(error => {
+      updateStatus(`❌ Nem sikerült elindítani: ${radio.name}`, true);
+      ttsAnnounce(`Nem sikerült elindítani a rádiót: ${radio.name}`, true);
+      stopBtn.disabled = true;
+      startRecordBtn.disabled = true;
+      volumeControlContainer.style.display = 'none';
+      renderRadioList(null);
+    });
+    
+    radioAudio.onerror = () => {
+      updateStatus(`❌ Betöltési hiba: ${radio.name}`, true);
+      //ttsAnnounce(`Betöltési hiba a rádióban: ${radio.name}`, true);
+      stopBtn.disabled = true;
+      startRecordBtn.disabled = true;
+      volumeControlContainer.style.display = 'none';
+      renderRadioList(null);
+    };
+  }
+  
+  function fadeOutRadio(callback) {
+    if (!gainNode || !radioAudio) {
+      if (callback) callback();
+      return;
+    }
+    gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 2);
+    
+    setTimeout(() => {
+      if (radioAudio) {
+        radioAudio.pause();
+        radioAudio.src = '';
+        radioAudio = null;
+      }
+      if (sourceNode) {
+        sourceNode.disconnect();
+        sourceNode = null;
+      }
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+      gainNode = null;
+      if (callback) callback();
+    }, 2000);
+  }
+  
+  function stopRadio() {
+    if (radioAudio && gainNode) {
+      fadeOutRadio(() => {
+        currentRadio = null;
+        updateStatus('⏹️ Rádió leállítva');
+        ttsAnnounce('Rádió leállítva');
+        playBtn.disabled = false;
+        stopBtn.disabled = true;
+        startRecordBtn.disabled = true;
+        stopRecordBtn.disabled = true;
+        volumeControlContainer.style.display = 'none';
+        downloadLink.style.display = 'none';
+        renderRadioList(null);
+        
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+      });
+    } else {
+      currentRadio = null;
+      updateStatus('⏹️ Rádió leállítva');
+      ttsAnnounce('Rádió leállítva');
+      playBtn.disabled = false;
+      stopBtn.disabled = true;
+      startRecordBtn.disabled = true;
+      stopRecordBtn.disabled = true;
+      volumeControlContainer.style.display = 'none';
+      downloadLink.style.display = 'none';
+      renderRadioList(null);
+    }
+    
+    if (isAutomationRunning) {
+      isPaused = true;
+    }
+  }
+  
+  function playRandomRadio() {
+    const randomIndex = Math.floor(Math.random() * radios.length);
+    const selectedRadio = radios[randomIndex];
+    playRadio(selectedRadio);
+  }
+  
+  let recordingStartTime = null;
+  
+  function startRecording() {
+    if (!radioAudio) {
+      ttsAnnounce('Előbb indítsd el a rádiót!');
+      return;
+    }
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      ttsAnnounce('A felvétel már folyamatban van!');
+      return;
+    }
+    
+    if (!audioContext || !sourceNode) {
+      ttsAnnounce('Nem elérhető az audio kontextus vagy forrás.');
+      return;
+    }
+    
+    gamePlaySound(['snd/record ttsmaker Emily.mp3', 'snd/record ttsmaker grace.mp3'], 1);
+    
+    const destination = audioContext.createMediaStreamDestination();
+    
+    if (gainNode) {
+      gainNode.connect(destination);
+    } else {
+      sourceNode.connect(destination);
+    }
+    
+    mediaRecorder = new MediaRecorder(destination.stream);
+    recordedChunks = [];
+    
+    mediaRecorder.ondataavailable = e => {
+      if (e.data.size > 0) {
+        recordedChunks.push(e.data);
+      }
+    };
+    
+    recordingStartTime = performance.now();
+    
+    mediaRecorder.onstop = () => {
+      const recordingEndTime = performance.now();
+      const durationMs = recordingEndTime - recordingStartTime;
+      
+      function formatDuration(ms) {
+        let totalSeconds = ms / 1000;
+        let hours = Math.floor(totalSeconds / 3600);
+        let minutes = Math.floor((totalSeconds % 3600) / 60);
+        let seconds = Math.floor(totalSeconds % 60);
+        let fractional = ms % 1000;
+        let tenths = Math.floor((fractional % 1000) / 100);
+        let hundredths = Math.floor((fractional % 100) / 1);
+        
+        const pad2 = n => n.toString().padStart(2, '0');
+        const pad1 = n => n.toString();
+        
+        return `${pad2(hours)}.${pad2(minutes)}.${pad2(seconds)}.${tenths}.${pad1(hundredths)}`;
+      }
+      
+      function cleanFileName(name) {
+        return name.toLowerCase()
+                   .replace(/\s+/g, '_')
+                   .replace(/[^a-z0-9-_]/g, '')
+                   .substring(0, 30);
+      }
+      
+      const baseName = currentRadio ? cleanFileName(currentRadio.name) : 'recording';
+      const filenameDuration = formatDuration(durationMs);
+      
+      const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+      const url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+      downloadLink.download = `${baseName}_${filenameDuration}.webm`;
+      downloadLink.style.display = 'inline-block';
+      
+      if (gainNode) {
+        gainNode.disconnect(destination);
+      } else {
+        sourceNode.disconnect(destination);
+      }
+    };
+    
+    mediaRecorder.start();
+    startRecordBtn.disabled = true;
+    stopRecordBtn.disabled = false;
+    updateStatus('🔴 Felvétel folyamatban...');
+    ttsAnnounce('Felvétel elindítva');
+  }
+  
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      updateStatus('⏹️ Felvétel leállítva');
+      ttsAnnounce('Felvétel leállítva');
+    }
+    stopRecordBtn.disabled = true;
+    startRecordBtn.disabled = false;
+  }
+  
+  playBtn.addEventListener('click', () => {
+    playRandomRadio();
+  });
+  
+  stopBtn.addEventListener('click', () => {
+    stopRadio();
+  });
+  
+  startRecordBtn.addEventListener('click', () => {
+    startRecording();
+  });
+  
+  stopRecordBtn.addEventListener('click', async () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      updateStatus('⏹️ Felvétel leállítva. MP3 kódolás folyamatban...');
+      ttsAnnounce('Felvétel leállítva, MP3 kódolás folyamatban');
+      
+      mediaRecorder.onstop = async () => {
+        try {
+          const audioContext = new AudioContext();
+          const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+          const arrayBuffer = await blob.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          const mp3Blob = encodeMp3FromAudioBuffer(audioBuffer);
+          
+          const url = URL.createObjectURL(mp3Blob);
+          downloadLink.href = url;
+          
+          const baseName = currentRadio ? getFormattedFileName(currentRadio.name) : 'recording';
+          
+          downloadLink.download = `${baseName}.mp3`;
+          downloadLink.style.display = 'inline-block';
+          
+          updateStatus('✅ MP3 kódolás kész, letöltheted a felvételt.');
+          ttsAnnounce('MP3 kódolás kész, letöltheted a felvételt');
+        } catch (e) {
+          console.error('MP3 kódolás hiba:', e);
+          updateStatus('❌ Hiba történt az MP3 kódolás során', true);
+          ttsAnnounce('Hiba történt az MP3 kódolás során', true);
+        }
+      };
+      
+      stopRecordBtn.disabled = true;
+      startRecordBtn.disabled = false;
+    }
+  });
+  
+  volumeMinusBtn.addEventListener('click', () => {
+    if (currentVolume > 0) {
+      currentVolume -= 5;
+      if (currentVolume < 0) currentVolume = 0;
+      updateVolumeDisplay();
+      updateStatus(`🔉 Hangerő: ${currentVolume}%`);
+      ttsAnnounce(`Hangerő: ${currentVolume} százalék`);
+    }
+  });
+  
+  volumePlusBtn.addEventListener('click', () => {
+    if (currentVolume < 100) {
+      currentVolume += 5;
+      if (currentVolume > 100) currentVolume = 100;
+      updateVolumeDisplay();
+      updateStatus(`🔊 Hangerő: ${currentVolume}%`);
+      ttsAnnounce(`Hangerő: ${currentVolume} százalék`);
+    }
+  });
+  
+  downloadLink.addEventListener('click', () => {
+    downloadLink.style.display = 'none';
+  });
+  
+  updateVolumeDisplay(); // Ez frissíti a megjelenítést az alapértelmezett 40%-ra
+  renderRadioList(null);
+  
+  const openOptionsBtn = document.getElementById('openOptionsBtn');
+  const optionsPanel = document.getElementById('optionsPanel');
+  const optionsPanelCloseBtn = document.getElementById('optionsPanelCloseBtn');
+  
+  openOptionsBtn.addEventListener('click', () => {
+    if (optionsPanel.style.display === 'block') {
+      optionsPanel.style.display = 'none';
+      openOptionsBtn.focus();
+    } else {
+      optionsPanel.style.display = 'block';
+      optionsPanel.setAttribute('tabindex', '-1');
+      optionsPanel.focus();
+    }
+  });
+  
+  optionsPanelCloseBtn.addEventListener('click', () => {
+    optionsPanel.style.display = 'none';
+    openOptionsBtn.focus();
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && optionsPanel.style.display === 'block') {
+      optionsPanel.style.display = 'none';
+      openOptionsBtn.focus();
+    }
+  });
+  
+  let automationInterval;
+  let isAutomationRunning = false;
+  let isPaused = false;
+  
+  const toggleAutomationBtn = document.getElementById('toggleAutomationBtn');
+  const playDurationInput = document.getElementById('playDuration');
+  const pauseDurationInput = document.getElementById('pauseDuration');
+  const automationStatus = document.getElementById('automationStatus');
+  
+  function startAutomationCycle() {
+    if (isAutomationRunning) return;
+    
+    const playDuration = parseFloat(playDurationInput.value) * 60 * 1000;
+    const pauseDuration = parseFloat(pauseDurationInput.value) * 60 * 1000;
+    
+    if (isNaN(playDuration) || playDuration <= 0 || isNaN(pauseDuration) || pauseDuration <= 0) {
+      ttsAnnounce('Kérjük, adj meg érvényes, pozitív időtartamot!', true);
+      return;
+    }
+    
+    isAutomationRunning = true;
+    toggleAutomationBtn.textContent = 'Automatizálás leállítása';
+    automationStatus.textContent = '🔄 Automatizálás aktív...';
+    ttsAnnounce('Automatizálás elindítva');
+    
+    function playPhase() {
+      if (!isAutomationRunning) return;
+      
+      playRandomRadio();
+      automationStatus.textContent = `🎵 Lejátszás: ${currentRadio?.name || 'véletlen rádió'}`;
+      
+      setTimeout(() => {
+        stopRadio();
+        automationStatus.textContent = `⏸️ Szünet: ${pauseDurationInput.value} perc`;
+        ttsAnnounce(`Szünet: ${pauseDurationInput.value} perc`);
+        pausePhase();
+      }, playDuration);
+    }
+    
+    function pausePhase() {
+      if (!isAutomationRunning) return;
+      
+      setTimeout(() => {
+        playPhase();
+      }, pauseDuration);
+    }
+    
+    playPhase();
+  }
+  
+  function stopAutomation() {
+    isAutomationRunning = false;
+    toggleAutomationBtn.textContent = 'Automatizálás indítása';
+    automationStatus.textContent = '⏹️ Automatizálás leállítva.';
+    ttsAnnounce('Automatizálás leállítva');
+    stopRadio();
+  }
+  
+  toggleAutomationBtn.addEventListener('click', () => {
+    if (isAutomationRunning) {
+      stopAutomation();
+    } else {
+      if (!playDurationInput.value || !pauseDurationInput.value) {
+        ttsAnnounce('Kérjük, add meg mindkét időtartamot!', true);
+        return;
+      }
+      startAutomationCycle();
+    }
+  });
+  
+  let audioPlayer = null;
+  
+  const startStreamBtn = document.getElementById('startStreamBtn');
+  const pasteClipboardBtn = document.getElementById('pasteClipboardBtn');
+  const openStreamUrlLinkBtn = document.getElementById('openStreamUrlLinkBtn');
+  const streamUrlInput = document.getElementById('streamUrl');
+  const radioContainer = document.getElementById('radioContainer');
+  
+  startStreamBtn.addEventListener('click', () => {
+    const streamUrl = streamUrlInput.value.trim();
+    if (streamUrl) {
+      removeAudioPlayer();
+      createAudioPlayer(streamUrl);
+    } else {
+      ttsAnnounce('Kérjük, adja meg a rádióállomás URL-jét!', true);
+    }
+  });
+  
+  pasteClipboardBtn.addEventListener('click', async () => {
+    try {
+      removeAudioPlayer();
+      const text = await navigator.clipboard.readText();
+      streamUrlInput.value = text;
+      createAudioPlayer(text);
+      const formattedText = `'${text}',`;
+      await navigator.clipboard.writeText(formattedText);
+      ttsAnnounce('Vágólap tartalma beillesztve és formázva');
+    } catch (error) {
+      console.error('Hiba a vágólap tartalmának beolvasásakor:', error);
+      ttsAnnounce('Nem sikerült beolvasni a vágólap tartalmát', true);
+    }
+  });
+  
+  openStreamUrlLinkBtn.addEventListener('click', () => {
+    window.open("https://streamurl.link", "_blank");
+    ttsAnnounce('Stream URL link megnyitva');
+  });
+  
+  const openInternetRadioBtn = document.getElementById('openInternetRadioBtn');
+  openInternetRadioBtn.addEventListener('click', async () => {
+    const url = "https://www.internet-radio.com/";
+    window.open(url, "_blank");
+    ttsAnnounce('Internet Radio dot com megnyitva');
+    try {
+      await navigator.clipboard.writeText(url);
+      ttsAnnounce('Az URL a vágólapra másolva');
+    } catch (err) {
+      console.error('Nem sikerült a vágólapra másolni:', err);
+      ttsAnnounce('Nem sikerült a vágólapra másolni az URL-t', true);
+    }
+  });
+  
+  function createAudioPlayer(streamUrl) {
+    audioPlayer = document.createElement('audio');
+    audioPlayer.controls = true;
+    audioPlayer.style.width = '100%';
+    audioPlayer.style.marginTop = '15px';
+    audioPlayer.style.borderRadius = '10px';
+    const source = document.createElement('source');
+    source.src = streamUrl;
+    source.type = 'audio/mpeg';
+    audioPlayer.appendChild(source);
+    radioContainer.appendChild(audioPlayer);
+    audioPlayer.play().catch(err => {
+      console.error('Nem sikerült elindítani az audio lejátszót:', err);
+      ttsAnnounce('Nem sikerült elindítani a streamet. Ellenőrizze az URL-t.', true);
+    });
+  }
+  
+  function removeAudioPlayer() {
+    if (audioPlayer) {
+      audioPlayer.pause();
+      if (radioContainer.contains(audioPlayer)) {
+        radioContainer.removeChild(audioPlayer);
+      }
+      audioPlayer = null;
+    }
+  }
+  
+  const clearInputBtn = document.getElementById('clearInputBtn');
+  clearInputBtn.addEventListener('click', () => {
+    streamUrlInput.value = '';
+    removeAudioPlayer();
+    streamUrlInput.focus();
+    ttsAnnounce('Mezők törölve');
+  });
+  
+  renderRadioList(null);
+  
+  radioNamesDiv.style.gridTemplateColumns = `repeat(${columnsOptions[currentColumnsIndex]}, 1fr)`;
+  toggleGridBtn.textContent = `${columnsOptions[currentColumnsIndex]} oszlop`;
+  
+  function formatRecordingDuration(ms) {
+    if (!ms || ms < 0) return '';
+    
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    let result = '';
+    if (hours > 0) result += `${hours} óra `;
+    if (minutes > 0) result += `${minutes} perc `;
+    result += `${seconds} másodperc`;
+    
+    return result.trim();
+  }
+  
+  let pressedKeys = new Set();
+  
+  console.log('=== RÁDIÓ LEJÁTSZÓ GOMB INFORMÁCIÓK ===');
+  console.log('1 - Véletlenszerű rádió indítása');
+  console.log('2 - Felvétel indítása');
+  console.log('3 - Aktuális állapot felolvasása');
+  console.log('5 - Rádió leállítása (nem bántja a felvételt)');
+  console.log('6 - Aktuális rádió mentése localStorage-ba');
+  console.log('8 - Mentett rádió betöltése localStorage-ból');
+  console.log('9 - FELVÉTEL LEÁLLÍTÁSA (egyedül nyomva)');
+  console.log('9 + 0 - Oldal újratöltése (együtt nyomva)');
+  console.log('W - Hangerő növelése (+5%)');
+  console.log('S - Hangerő csökkentése (-5%)');
+  console.log('Escape - Options panel bezárása');
+  console.log('===============================');
+  
+  document.addEventListener('keydown', function(event) {
+    const tagName = event.target.tagName.toLowerCase();
+    if (tagName === 'input' || tagName === 'textarea') {
+      return;
+    }
+    
+    pressedKeys.add(event.key);
+    
+    console.log(`Gomb lenyomva: ${event.key} (pressedKeys: ${Array.from(pressedKeys).join(', ')})`);
+    
+    if (pressedKeys.has('9') && pressedKeys.has('0')) {
+      console.log('9 + 0 gombok együtt nyomva - oldal újratöltése...');
+      window.location.reload(true);
+      return;
+    }
+    
+    // W gomb - hangerő növelése
+    if (event.key === 'w' || event.key === 'W') {
+      console.log('W gomb - hangerő növelése');
+      if (currentVolume < 100) {
+        currentVolume += 5;
+        if (currentVolume > 100) currentVolume = 100;
+        updateVolumeDisplay();
+        updateStatus(`🔊 Hangerő: ${currentVolume}%`);
+        ttsAnnounce(`Hangerő: ${currentVolume} százalék`);
+      }
+      return;
+    }
+    
+    // S gomb - hangerő csökkentése
+    if (event.key === 's' || event.key === 'S') {
+      console.log('S gomb - hangerő csökkentése');
+      if (currentVolume > 0) {
+        currentVolume -= 5;
+        if (currentVolume < 0) currentVolume = 0;
+        updateVolumeDisplay();
+        updateStatus(`🔉 Hangerő: ${currentVolume}%`);
+        ttsAnnounce(`Hangerő: ${currentVolume} százalék`);
+      }
+      return;
+    }
+    
+    if (event.key === '9' && !pressedKeys.has('0')) {
+      console.log('9 gomb - felvétel leállítása');
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+        updateStatus('⏹️ Felvétel leállítva 9-es gombbal.');
+        gamePlaySound(['snd/stop_record.mp3'], 1);
+        ttsAnnounce('Felvétel leállítva 9-es gombbal');
+      } else {
+        updateStatus('ℹ️ Nincs aktív felvétel', true);
+        ttsAnnounce('Nincs aktív felvétel', true);
+      }
+      return;
+    }
+    
+    if (event.key === '5') {
+      console.log('5 gomb - rádió leállítása');
+      if (radioAudio) {
+        stopRadio();
+        updateStatus('⏹️ Rádió leállítva 5-ös gombbal.');
+        gamePlaySound(['snd/stop.mp3'], 1);
+        ttsAnnounce('Rádió leállítva 5-ös gombbal');
+      }
+      return;
+    }
+    
+    if (event.key === '1') {
+      console.log('1 gomb - véletlenszerű rádió indítása');
+      playRandomRadio();
+    } 
+    else if (event.key === '2') {
+      console.log('2 gomb - felvétel indítása');
+      if (startRecordBtn && !startRecordBtn.disabled) {
+        startRecording();
+      } else {
+        updateStatus('❌ Nem lehet elindítani a felvételt. Indítsd el előbb a rádiót!', true);
+        ttsAnnounce('Nem lehet elindítani a felvételt. Indítsd el előbb a rádiót!', true);
+      }
+    }
+    else if (event.key === '3') {
+      console.log('3 gomb - állapot felolvasása');
+      if (currentRadio && currentRadio.name) {
+        const now = new Date();
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+        
+        let recordingDurationText = '';
+        if (mediaRecorder && mediaRecorder.state === 'recording' && recordingStartTime) {
+          const elapsedMs = performance.now() - recordingStartTime;
+          const formattedDuration = formatRecordingDuration(elapsedMs);
+          recordingDurationText = `A felvétel hossza: ${formattedDuration}. `;
+        }
+        
+        const textToRead = `${currentRadio.name}. Jelenleg ${hour} óra ${minute} perc van. ${recordingDurationText}`;
+        
+        readUniversal(textToRead, 'hu-HU');
+        updateStatus(`🗣️ Felolvasás: ${textToRead}`);
+      } else {
+        updateStatus('ℹ️ Nincs aktív rádióadó', true);
+        ttsAnnounce('Nincs aktív rádióadó', true);
+      }
+    }
+    else if (event.key === '6') {
+      console.log('6 gomb - rádió mentése');
+      if (currentRadio && currentRadio.url) {
+        localStorage.setItem('savedRadio', JSON.stringify(currentRadio));
+        updateStatus(`💾 Mentve: ${currentRadio.name}`);
+        gamePlaySound(['snd/button/Search Ski Binding Soundsnap_1749660526798.mp3', 'snd/button/Search Ski Binding Soundsnap_1749660503085.mp3', 'snd/button/Search Ski Binding Soundsnap.mp3'], 1);
+        ttsAnnounce(`Rádió mentve: ${currentRadio.name}`);
+      } else {
+        updateStatus('❌ Nincs aktív rádió', true);
+        ttsAnnounce('Nincs aktív rádió', true);
+      }
+    }
+    else if (event.key === '8') {
+      console.log('8 gomb - mentett rádió betöltése');
+      const savedRadioJSON = localStorage.getItem('savedRadio');
+      if (savedRadioJSON) {
+        try {
+          const savedRadio = JSON.parse(savedRadioJSON);
+          if (savedRadio && savedRadio.url) {
+            playRadio(savedRadio);
+            updateStatus(`📻 Betöltve: ${savedRadio.name}`);
+            ttsAnnounce(`Betöltve: ${savedRadio.name}`);
+          } else {
+            updateStatus('❌ Mentett rádió adatok hibásak', true);
+            ttsAnnounce('Mentett rádió adatok hibásak', true);
+          }
+        } catch (e) {
+          updateStatus('❌ Mentett rádió adatok nem olvashatók', true);
+          ttsAnnounce('Mentett rádió adatok nem olvashatók', true);
+        }
+      } else {
+        updateStatus('ℹ️ Nincs mentett rádió', true);
+        ttsAnnounce('Nincs mentett rádió', true);
+      }
+    }
+  });
+  
+  document.addEventListener('keyup', function(event) {
+    console.log(`Gomb felengedve: ${event.key}`);
+    pressedKeys.delete(event.key);
+  });
+</script>
+
+</body>
+</html>
