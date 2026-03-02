@@ -1,0 +1,577 @@
+
+
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whisper Pro v7 - Timer & Key Manager</title>
+    <style>
+        :root { 
+            --accent: #00ff9d; 
+            --bg: #0d0d12; 
+            --panel: #16161e; 
+            --border: #444; 
+            --error: #ff4757; 
+            --text-main: #ffffff; 
+            --text-dim: #bbbbbb; 
+            --alarm-color: #2c0505;
+        }
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            padding: 20px; 
+            text-align: center; 
+            font-size: 18px; 
+            transition: background 0.5s;
+        }
+        
+        /* Alarm villogás hatás */
+        body.alarm-active {
+            animation: flashRed 1s infinite alternate;
+        }
+        @keyframes flashRed {
+            from { background: var(--bg); }
+            to { background: var(--alarm-color); }
+        }
+
+        .container { 
+            max-width: 850px; 
+            margin: 0 auto; 
+            background: var(--panel); 
+            padding: 30px; 
+            border-radius: 16px; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 0 50px rgba(0,0,0,0.7); 
+        }
+        h1 { color: var(--accent); font-size: 2.2rem; margin-bottom: 25px; }
+        .status { 
+            color: var(--accent); 
+            font-weight: 800; 
+            margin: 20px; 
+            font-size: 1.5rem; 
+            min-height: 1.6em; 
+            text-transform: uppercase; 
+        }
+        .active-mic { color: var(--error); text-shadow: 0 0 20px var(--error); }
+        
+        /* Vezérlők és API Key */
+        .controls { 
+            margin-bottom: 20px; 
+            background: #252533; 
+            padding: 18px; 
+            border-radius: 10px; 
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            border: 1px solid #444;
+        }
+        .control-group { display: flex; align-items: center; gap: 10px; }
+        
+        input[type="password"], input[type="number"] { 
+            background: #3d3d4d; 
+            color: white; 
+            border: 1px solid #666; 
+            padding: 8px 12px; 
+            border-radius: 6px; 
+            font-size: 0.9rem;
+            outline: none;
+        }
+        input[type="password"]:focus { border-color: var(--accent); }
+
+        select { 
+            background: #3d3d4d; 
+            color: white; 
+            border: 1px solid #666; 
+            padding: 10px 15px; 
+            border-radius: 6px; 
+            font-size: 1.1rem;
+        }
+        .vib-toggle { cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: bold; }
+        input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+
+        /* Timer stílusok */
+        .timer-panel {
+            background: #1a1a24;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+            min-width: 120px;
+            text-align: center;
+        }
+        .btn-timer {
+            background: #3d3d4d;
+            color: white;
+            border: 1px solid #666;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .btn-timer:hover { background: #4d4d5d; border-color: var(--accent); }
+        .btn-timer.stop { background: #8b0000; border-color: #ff4757; }
+        .btn-timer:active { transform: scale(0.95); }
+
+        textarea { 
+            width: 100%; 
+            height: 200px; 
+            background: #050508; 
+            border: 1px solid #4d4d61; 
+            color: #ffffff; 
+            border-radius: 10px; 
+            padding: 20px; 
+            font-size: 1.2rem; 
+            margin-bottom: 15px; 
+            resize: vertical;
+            box-sizing: border-box;
+            line-height: 1.5;
+        }
+        #result-display { 
+            background: #1c1c26; 
+            border: 1px solid #444; 
+            padding: 18px; 
+            border-radius: 10px; 
+            text-align: left; 
+            color: var(--accent); 
+            font-size: 0.9rem;
+        }
+        .info-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+            text-align: left; 
+            margin-top: 30px; 
+            color: var(--text-dim); 
+            font-size: 1.05rem; 
+            border-top: 1px solid #444; 
+            padding-top: 25px; 
+        }
+        .info-grid b { color: var(--accent); margin-right: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>WHISPER PRO v7</h1>
+
+    <div class="controls">
+        <!-- API Key Input -->
+        <div class="control-group">
+            <label>API KEY:</label>
+            <input type="password" id="apiKeyInput" placeholder="gsk_..." autocomplete="off">
+        </div>
+        
+        <div class="control-group">
+            <label>NYELV:</label>
+            <select id="langSelect">
+                <option value="hu">Magyar (HU)</option>
+                <option value="en">Angol (EN)</option>
+                <option value="auto">Auto-Detect</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label class="vib-toggle"><input type="checkbox" id="vibToggle"> REZGÉS</label>
+        </div>
+    </div>
+
+    <!-- Countdown Alarm -->
+    <div class="timer-panel">
+        <div id="timerDisplay" class="timer-display">00:00</div>
+        <div class="control-group">
+            <input type="number" id="timerInput" placeholder="Perc" min="1" max="180" style="width: 70px;">
+            <label>perc</label>
+        </div>
+        <button class="btn-timer" id="startTimerBtn">Indítás</button>
+        <button class="btn-timer stop" id="stopTimerBtn">Stop</button>
+    </div>
+
+    <div id="st-text" class="status">READY</div>
+    
+    <textarea id="kerdes" placeholder="Bármilyen gombnyomás leállítja a felolvasást..."></textarea>
+    
+    <div id="result-display">Rendszer: 1 duplán = UNDO (max. 15 lépés)</div>
+
+    <div class="info-grid">
+        <div><b>1 duplán:</b> Visszavonás (Undo)</div>
+        <div><b>7:</b> PTT rögzítés</div>
+        <div><b>3:</b> Okos törlés</div>
+        <div><b>8:</b> Start/Stop</div>
+        <div><b>1:</b> Olvasás</div>
+        <div><b>4:</b> Ismétlés</div>
+        <div><b>SHIFT:</b> TTS Stop</div>
+    </div>
+</div>
+
+<script>
+    /* ---------- ÁLLANDÓ KONSTANSÁK ---------- */
+    const MAX_HISTORY = 15;
+    const DOUBLE_TAP_MS = 350;
+    const STORAGE_KEY_API = 'w7_groq_key';
+
+    /* ---------- ÁLLAPOTVÁLTOZÓK ---------- */
+    let historyStack = [];
+    let currentContent = "";
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+    let lastAiResponse = "";
+    let synth = window.speechSynthesis;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Timer változók
+    let timerInterval = null;
+    let timerSeconds = 0;
+    let isTimerRunning = false;
+
+    const stText = document.getElementById('st-text');
+    const inputField = document.getElementById('kerdes');
+    const langSelect = document.getElementById('langSelect');
+    const vibToggle = document.getElementById('vibToggle');
+    const resDisplay = document.getElementById('result-display');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+
+    // Timer elemek
+    const timerDisplay = document.getElementById('timerDisplay');
+    const timerInput = document.getElementById('timerInput');
+    const startTimerBtn = document.getElementById('startTimerBtn');
+    const stopTimerBtn = document.getElementById('stopTimerBtn');
+
+    let keysPressed = {};
+    let last1Press = 0;
+
+    /* ---------- INICIALIZÁLÁS ---------- */
+    window.onload = () => {
+        langSelect.value = localStorage.getItem('w7_lang') || 'hu';
+        vibToggle.checked = localStorage.getItem('w7_vib') === 'true';
+        currentContent = localStorage.getItem('w7_saved_text') || "";
+        inputField.value = currentContent;
+
+        // API Key betöltése
+        const savedKey = localStorage.getItem(STORAGE_KEY_API);
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+        }
+
+        // Timer mentett állapot visszaállítása (opcionális, most reseteljük indításkor)
+        resetTimerUI();
+    };
+
+    /* ---------- API KEY KEZELÉS ---------- */
+    apiKeyInput.addEventListener('input', (e) => {
+        const key = e.target.value.trim();
+        localStorage.setItem(STORAGE_KEY_API, key);
+    });
+
+    function getApiKey() {
+        return localStorage.getItem(STORAGE_KEY_API) || "";
+    }
+
+    /* ---------- HISTORY KEZELÉSE ---------- */
+    function saveToHistory() {
+        historyStack.push(inputField.value);
+        if (historyStack.length > MAX_HISTORY) historyStack.shift();
+    }
+
+    function undo() {
+        if (historyStack.length > 0) {
+            inputField.value = historyStack.pop();
+            syncAll(true);
+            beep(900, 0.1);
+            resDisplay.innerText = "Visszavonva! Lépések hátra: " + historyStack.length;
+        } else {
+            resDisplay.innerText = "Nincs több visszavonható lépés.";
+        }
+    }
+
+    /* ---------- SZINKRONIZÁLÁS ---------- */
+    async function syncAll(isUndo = false) {
+        if (!isUndo) saveToHistory();
+        currentContent = inputField.value;
+        localStorage.setItem('w7_saved_text', currentContent);
+        try {
+            await navigator.clipboard.writeText(currentContent);
+            resDisplay.innerText = isUndo ? "UNDO VÉGREHAJTVA" : "SZINKRONIZÁLVA ✅";
+        } catch (e) {
+            resDisplay.innerText = "Vágólap hiba.";
+        }
+    }
+
+    /* ---------- SEGÉDFÜGGVÉNYEK ---------- */
+    function stopTTS() { synth.cancel(); }
+
+    function vibrate(pattern) {
+        if (vibToggle.checked && "vibrate" in navigator) {
+            navigator.vibrate(pattern);
+        }
+    }
+
+    function beep(freq = 550, duration = 0.15) {
+        try {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.frequency.value = freq;
+            g.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            o.start();
+            o.stop(audioCtx.currentTime + duration);
+        } catch (e) {}
+    }
+
+    /* ---------- OKOS TÖRLÉS ---------- */
+    function smartDelete() {
+        saveToHistory();
+        const text = inputField.value;
+        if (!text) return;
+        let lines = text.split('\n');
+        let lastLine = lines[lines.length - 1];
+        const sentences = lastLine.match(/[^.!?]+[.!?]+/g) || [lastLine];
+        if (sentences.length >= 3) {
+            sentences.pop();
+            lines[lines.length - 1] = sentences.join('').trimEnd();
+        } else {
+            lines.pop();
+        }
+        inputField.value = lines.join('\n');
+        beep(400, 0.1);
+        syncAll(true);
+    }
+
+    /* ---------- BILLENTŰ KEZELÉS ---------- */
+    window.addEventListener('keydown', (e) => {
+        // Ha a fókusz az input mezőkben van, ne kezelje a globális gyorsgombokat
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            // Kivéve a Escape, ami mindent leállít
+            if (e.key === 'Escape') {
+                 stopTTS();
+                 if(isRecording) stopRecording();
+                 stopAlarm(); // Alarm leállítása bármilyen gombnyomásra
+            }
+            return;
+        }
+
+        stopTTS();
+        keysPressed[e.key] = true;
+        if (e.repeat) return;
+
+        if (e.key === '1') {
+            e.preventDefault();
+            const now = Date.now();
+            if (now - last1Press < DOUBLE_TAP_MS) {
+                undo();
+                last1Press = 0;
+            } else {
+                last1Press = now;
+                speak(inputField.value || "Üres.");
+            }
+        }
+
+        if (e.key === '3') { e.preventDefault(); smartDelete(); }
+        if (e.key === '4') { e.preventDefault(); speak(lastAiResponse || "Nincs."); }
+
+        if (e.key === '7' && !isRecording) startRecording("● RÖGZÍTÉS...");
+        if (e.key === '8') {
+            if (!isRecording) startRecording("● FOLYAMATOS");
+            else stopRecording();
+        }
+        
+        // Bármilyen gomb leállítja az active alarmot
+        if (isTimerRunning && timerSeconds === 0) {
+             stopAlarm();
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        delete keysPressed[e.key];
+        if (e.key === '7' && isRecording) stopRecording();
+    });
+
+    /* ---------- IDŐZÍTŐ (TIMER) LOGIKA ---------- */
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60).toString().padStart(2, '0');
+        const s = (sec % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    function updateTimerDisplay() {
+        timerDisplay.textContent = formatTime(timerSeconds);
+    }
+
+    function startTimer() {
+        if (isTimerRunning) return;
+        
+        const mins = parseInt(timerInput.value);
+        if (isNaN(mins) || mins <= 0) {
+            alert("Kérlek adj meg egy érvényes időtartamot (percben)!");
+            return;
+        }
+
+        timerSeconds = mins * 60;
+        isTimerRunning = true;
+        timerInput.disabled = true;
+        startTimerBtn.disabled = true;
+        updateTimerDisplay();
+
+        timerInterval = setInterval(() => {
+            timerSeconds--;
+            updateTimerDisplay();
+
+            if (timerSeconds <= 0) {
+                triggerAlarm();
+            }
+        }, 1000);
+    }
+
+    function stopTimer(isReset = false) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        timerInput.disabled = false;
+        startTimerBtn.disabled = false;
+        document.body.classList.remove('alarm-active');
+        
+        if (isReset) {
+            timerSeconds = 0;
+            updateTimerDisplay();
+        }
+    }
+    
+    function resetTimerUI() {
+        stopTimer(true);
+    }
+
+    function triggerAlarm() {
+        stopTimer(true); // Timer leállítása, de a "stopped" állapotban marad
+        document.body.classList.add('alarm-active');
+        
+        // Folyamatos hangjelzés
+        let alarmCount = 0;
+        const alarmSound = setInterval(() => {
+            beep(800, 0.3);
+            vibrate(500);
+            alarmCount++;
+            if (alarmCount > 10 || !document.body.classList.contains('alarm-active')) {
+                clearInterval(alarmSound);
+            }
+        }, 800);
+
+        stText.textContent = "⏰ IDŐ LEJÁRT!";
+        stText.style.color = "var(--error)";
+    }
+
+    function stopAlarm() {
+        document.body.classList.remove('alarm-active');
+        stText.textContent = "READY";
+        stText.style.color = "var(--accent)";
+    }
+
+    startTimerBtn.addEventListener('click', startTimer);
+    stopTimerBtn.addEventListener('click', () => stopTimer(true));
+
+
+    /* ---------- RÖGZÍTÉS ---------- */
+    async function startRecording(msg) {
+        stopTTS();
+        // Stop alarm if active
+        if(document.body.classList.contains('alarm-active')) stopAlarm();
+
+        isRecording = true;
+        audioChunks = [];
+        stText.textContent = msg;
+        stText.classList.add('active-mic');
+        beep(600, 0.1);
+        vibrate(60);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+            mediaRecorder.onstop = sendToWhisper;
+            mediaRecorder.start();
+        } catch (err) {
+            stText.textContent = "MIKROFON HIBA!";
+            isRecording = false;
+        }
+    }
+
+    function stopRecording() {
+        if (!isRecording) return;
+        isRecording = false;
+        stText.textContent = "FELDOLGOZÁS...";
+        stText.classList.remove('active-mic');
+        beep(300, 0.1);
+        vibrate([40, 40, 40]);
+        if (mediaRecorder) mediaRecorder.stop();
+    }
+
+    async function sendToWhisper() {
+        const apiKey = getApiKey();
+        if (!apiKey) {
+            stText.textContent = "HIÁNYZIK API KEY!";
+            alert("Nincs megadva API Kulcs a felső sorban!");
+            return;
+        }
+
+        const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg' });
+        const formData = new FormData();
+        formData.append("file", audioBlob, "speech.m4a");
+        formData.append("model", "whisper-large-v3-turbo");
+        if (langSelect.value !== "auto") formData.append("language", langSelect.value);
+
+        try {
+            const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${apiKey}` },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error("API Hiba: " + response.status);
+            }
+
+            const data = await response.json();
+            const text = data.text || "";
+            if (text) {
+                saveToHistory();
+                inputField.value += (inputField.value ? '\n' : '') + text;
+                lastAiResponse = text;
+                await syncAll(true);
+                speak(text);
+                stText.textContent = "READY";
+                stText.style.color = "var(--accent)";
+            } else {
+                stText.textContent = "NINCS SZÖVEG";
+            }
+        } catch (err) {
+            console.error(err);
+            stText.textContent = "API HIBA";
+            stText.style.color = "var(--error)";
+        }
+    }
+
+    /* ---------- TTS ---------- */
+    function speak(text) {
+        if (!text) return;
+        stopTTS();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = (langSelect.value === 'en') ? 'en-US' : 'hu-HU';
+        synth.speak(utter);
+    }
+</script>
+</body>
+</html>
