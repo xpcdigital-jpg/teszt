@@ -1,0 +1,1030 @@
+
+
+
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groq Agent – All‑in‑One Video Studio v6.2</title>
+    <style>
+        :root {
+            --agent-color: #f35420;
+            --yt-red: #ff0000;
+            --tech-blue: #4aa3ff;
+            --ambient-green: #00c853;
+            --link-purple: #9c27b0;
+            --tts-color: #ffeb3b;
+            --bg: #121212;
+            --panel-bg: #1a1a1a;
+            --text-main: #e0e0e0;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'Roboto', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .terminal {
+            background: var(--panel-bg);
+            border: 1px solid var(--agent-color);
+            border-radius: var(--border-radius);
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 0 30px rgba(243, 84, 32, 0.15);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--agent-color);
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            background: var(--agent-color);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 8px var(--agent-color);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0.5; transform: scale(0.9); }
+        }
+
+        .content { padding: 20px; }
+
+        .input-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="password"],
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: white;
+            font-family: monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus { outline: none; border-color: var(--agent-color); }
+        textarea { resize: vertical; min-height: 60px; }
+
+        .btn-container { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
+
+        button {
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:active { transform: translateY(1px); }
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .btn-search { background: var(--yt-red); flex: 2; }
+        .btn-ambient { background: var(--ambient-green); color: #000; flex: 1; }
+        .btn-clean { background: #555; color: #ccc; flex: 0 0 50px; font-size: 18px; padding: 0; }
+        .btn-clean:hover { background: #d32f2f; color: white; }
+
+        .btn-analyze { background: var(--tech-blue); }
+        .btn-audio { background: var(--agent-color); }
+
+        .btn-paste {
+            background: #444;
+            flex: 0 0 60px;
+            font-size: 24px;
+            padding: 0;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .btn-paste:hover { background: #555; }
+
+        .btn-tts-start { background: var(--tts-color); color: #000; flex: 1; }
+        .btn-tts-stop { background: #d32f2f; color: white; flex: 1; }
+
+        .history-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #222;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #333;
+        }
+
+        .btn-nav {
+            width: 40px;
+            padding: 5px;
+            flex: none;
+            background: #333;
+            font-size: 16px;
+        }
+
+        .btn-nav:hover { background: #444; }
+
+        .btn-trash {
+            background: #522;
+            color: #ffcccc;
+            width: 40px;
+            padding: 5px;
+            flex: none;
+        }
+
+        .btn-trash:hover { background: #a33; }
+
+        #historyCounter {
+            font-size: 12px;
+            color: #aaa;
+            margin: 0 auto;
+        }
+
+        .control-panel {
+            display: none;
+            margin-top: 10px;
+            padding: 15px;
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 8px;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel-title {
+            font-size: 11px;
+            color: #aaa;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .btn-control {
+            background: #333;
+            font-size: 12px;
+            padding: 8px;
+            flex: none;
+            width: auto;
+        }
+
+        .btn-control:hover { background: #555; }
+
+        .volume-indicator {
+            margin-left: auto;
+            font-size: 11px;
+            color: #888;
+        }
+
+        .speed-indicator {
+            font-weight: bold;
+            color: var(--agent-color);
+            min-width: 40px;
+            text-align: center;
+            font-size: 14px;
+            margin: 0 5px;
+        }
+
+        .btn-external {
+            background: var(--link-purple);
+            width: 100%;
+            justify-content: center;
+            margin-bottom: 8px;
+            text-decoration: none;
+        }
+
+        .btn-external:last-child { margin-bottom: 0; }
+        .btn-external:hover { background: #b026d0; }
+
+        #output {
+            position: relative;
+            margin-top: 25px;
+            padding: 40px 20px 20px 20px;
+            background: #000;
+            border-radius: 8px;
+            border-left: 4px solid var(--agent-color);
+            font-family: 'Roboto', sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
+            min-height: 100px;
+            overflow: visible;
+            word-wrap: break-word;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .copy-btn:hover {
+            background: var(--agent-color);
+            border-color: var(--agent-color);
+        }
+
+        #output h1,
+        #output h2,
+        #output h3 {
+            color: var(--agent-color);
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        #output p { margin-bottom: 1em; }
+        #output ul,
+        #output ol { padding-left: 20px; }
+        #output li { margin-bottom: 8px; }
+
+        #output blockquote {
+            border-left: 4px solid var(--tech-blue);
+            padding-left: 1em;
+            color: #bbb;
+            margin: 1em 0;
+            font-style: italic;
+        }
+
+        #output code {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #ffeb3b;
+            font-size: 0.9em;
+        }
+
+        #output pre {
+            background: #111;
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #444;
+            margin: 10px 0;
+        }
+
+        #output pre code { background: transparent; padding: 0; color: #ccc; }
+
+        #output a {
+            color: var(--tech-blue);
+            text-decoration: none;
+            border-bottom: 1px dotted var(--tech-blue);
+            cursor: pointer;
+            transition: background 0.2s;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        #output a:hover {
+            color: white;
+            background: rgba(74, 163, 255, 0.3);
+            border-bottom-style: solid;
+        }
+
+        .separator {
+            height: 1px;
+            background: #333;
+            margin: 25px 0;
+            position: relative;
+        }
+
+        .separator::after {
+            content: "VAGY";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--panel-bg);
+            padding: 0 10px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        #bubble {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(243, 84, 32, 0.95);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        #bubble.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+<div class="terminal">
+    <div class="header">
+        <div class="status-bar">
+            <div class="dot"></div>
+            <span>GROQ AGENT :: VIDEO STUDIO</span>
+        </div>
+        <div style="font-size: 12px; color: #666;">v6.2 COPY BUTTON</div>
+    </div>
+
+    <div class="content">
+        <!-- API Kulcs -->
+        <div class="input-group">
+            <label for="apiKey">API kulcs (Groq Cloud)</label>
+            <input type="password" id="apiKey" placeholder="gsk_..." autocomplete="off">
+        </div>
+
+        <!-- 1. Funkció: Keresés -->
+        <div class="input-group">
+            <label for="searchPrompt">1. Videó kutatása (témát megadása)</label>
+            <textarea id="searchPrompt" rows="2" placeholder="Pl: Cyberpunk city night rain..."></textarea>
+
+            <div class="btn-container" style="margin-top: 10px;">
+                <button class="btn-paste" onclick="pasteToSearch()" title="Beillesztés a vágólapról">📋</button>
+                <button class="btn-ambient" onclick="addAmbient()">🌿 Ambient</button>
+                <button class="btn-search" onclick="runVideoSearch()">▶ YouTube keresés</button>
+                <button class="btn-clean" onclick="cleanSearchInput()" title="Mező törlése">✖</button>
+            </div>
+            <div style="font-size:11px; color:#666; margin-top:5px;">Tipp: Kattints a talált linkekre a lejátszáshoz.</div>
+        </div>
+
+        <!-- ÚJ SZEKCIÓ: Gyors hozzáférés a kért linkekhez -->
+        <div class="input-group">
+            <label>Külső eszközök (Új lapon nyílnak)</label>
+            <div class="btn-container" style="flex-direction: column; gap: 10px;">
+                <button class="btn-external" onclick="openExternal('https://xpcdigital-jpg.github.io/teszt/FanficJina.html')">📖 Fanfic Jina</button>
+                <button class="btn-external" onclick="openExternal('https://xpcdigital-jpg.github.io/teszt/KérdezdHármatsingleBookReader.html')">❓ Kérdezd Hármat</button>
+            </div>
+        </div>
+
+        <div class="separator"></div>
+
+        <!-- 2. Funkció: Elemzés & Hang -->
+        <div class="input-group">
+            <label for="videoUrl">2. Videó elemzése / lejátszása (URL)</label>
+            <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=...">
+
+            <!-- YouTube vezérlőpanel -->
+            <div id="audio-controls" class="control-panel">
+                <div class="panel-title">Videó lejátszás vezérlés</div>
+                <div class="control-row">
+                    <button class="btn-control" onclick="togglePlay()" id="btnPlayPause" style="flex:1;">⏯ Play</button>
+                    <button class="btn-control" onclick="stopAudio()" style="flex:1;">⏹ Stop</button>
+                    <span class="volume-indicator" id="volDisplay">Hangerő: 100%</span>
+                </div>
+                <div class="control-row">
+                    <button class="btn-control" onclick="changeSpeed(-0.25)" style="flex:1;">🐢 Lassabb</button>
+                    <span class="speed-indicator" id="speedDisplay">1.0x</span>
+                    <button class="btn-control" onclick="changeSpeed(0.25)" style="flex:1;">🚀 Gyorsabb</button>
+                </div>
+                <div class="control-row">
+                    <button class="btn-control" onclick="setVolume(3)" style="flex:1; background:#444;">🔈 3%</button>
+                    <button class="btn-control" onclick="setVolume(100)" style="flex:1; background:#444;">🔊 100%</button>
+                </div>
+            </div>
+
+            <div class="btn-container" style="margin-top: 10px;">
+                <button class="btn-analyze" onclick="processVideo()">🧠 Miről szól? (Auto‑TTS)</button>
+                <button class="btn-audio" onclick="playAudioOnly()">🔊 Hang lejátszása</button>
+            </div>
+        </div>
+
+        <!-- TTS vezérlőpanel -->
+        <div class="input-group" style="margin-top: 30px;">
+            <label>3. Szövegfelolvasó (TTS)</label>
+            <div class="control-panel" style="display: block; border-color: var(--tts-color);">
+                <div class="panel-title" style="color: var(--tts-color); border-color: #444;">Szavas szünet mód (Pro)</div>
+                <div class="control-row">
+                    <button class="btn-tts-start" onclick="startTTS()">▶ TTS indítása</button>
+                    <button class="btn-tts-stop" onclick="stopTTS()">■ TTS leállítása</button>
+                </div>
+                <div style="font-size: 11px; color: #888; margin-top: 5px; text-align: center;">
+                    A kimeneti szöveg elemzése szünetekkel.
+                </div>
+            </div>
+        </div>
+
+        <!-- History navigation -->
+        <div class="history-bar">
+            <button class="btn-nav" onclick="navHistory(-1)" id="btnPrev" title="Előző">&lt;</button>
+            <span id="historyCounter">0 / 0</span>
+            <button class="btn-nav" onclick="navHistory(1)" id="btnNext" title="Következő">&gt;</button>
+            <button class="btn-trash" onclick="clearHistory()" title="Törlés">🗑</button>
+        </div>
+
+        <!-- Kimenet -->
+        <div id="output">
+            <button class="copy-btn" onclick="copyOutput()" title="Másolás a vágólapra">📋 Copy</button>
+            Üdvözöllek! Válassz egy műveletet fent.<br>Az eredmények és elemzések itt jelennek meg.
+        </div>
+    </div>
+</div>
+
+<!-- Rejtett beállítások a TTS-hez -->
+<input type="hidden" id="pauseMs" value="0">
+<input type="hidden" id="rate" value="1">
+<input type="hidden" id="pitch" value="1">
+<input type="hidden" id="readPunctuation" value="false">
+<input type="hidden" id="randomVoice" value="false">
+
+<!-- BUBORÉK ÜZENET -->
+<div id="bubble"></div>
+
+<!-- Rejtett YouTube Iframe -->
+<div id="player-container" style="display:none;"><div id="player"></div></div>
+
+<script>
+    // --- Változók és inicializálás ---
+    const outputDiv = document.getElementById('output');
+    const apiKeyInput = document.getElementById('apiKey');
+    const videoUrlInput = document.getElementById('videoUrl');
+    const audioControls = document.getElementById('audio-controls');
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const volDisplay = document.getElementById('volDisplay');
+    const speedDisplay = document.getElementById('speedDisplay');
+
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const historyCounter = document.getElementById('historyCounter');
+
+    let player;
+    let currentVolume = 100;
+    let currentSpeed = 1.0;
+    let historyData = [];
+    let historyIndex = -1;
+
+    apiKeyInput.value = localStorage.getItem('safe_groq_key') || '';
+    loadHistoryFromStorage();
+
+    // YouTube API betöltése
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    function onYouTubeIframeAPIReady() { console.log("YouTube API Ready"); }
+
+    // --- Segédfüggvények ---
+    let bubbleTimeout;
+    function showBubble(message) {
+        const b = document.getElementById('bubble');
+        b.innerText = message;
+        b.classList.add('show');
+        if (bubbleTimeout) clearTimeout(bubbleTimeout);
+        bubbleTimeout = setTimeout(() => { b.classList.remove('show'); }, 3000);
+    }
+
+    function logError(message) {
+        outputDiv.innerHTML = `<span style="color:#ff4444; font-weight:bold;">⚠ HIBA:</span> ${message}`;
+        showBubble("⚠ Hiba történt!");
+    }
+
+    function getKey() { return apiKeyInput.value.trim(); }
+
+    function extractVideoID(url) {
+        let videoId = '';
+        if (url.includes('v=')) videoId = url.split('v=')[1].split('&')[0];
+        else if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split('?')[0];
+        return videoId;
+    }
+
+    function cleanSearchInput() {
+        document.getElementById('searchPrompt').value = '';
+        showBubble("🗑 Mező törölve");
+        document.getElementById('searchPrompt').focus();
+    }
+
+    // --- Másolás a vágólapra ---
+    async function copyOutput() {
+        const text = outputDiv.innerText;
+        try {
+            await navigator.clipboard.writeText(text);
+            showBubble("📋 Kimásolva a vágólapra!");
+        } catch (err) {
+            showBubble("Hiba a másolásnál.");
+            console.error('Copy failed', err);
+        }
+    }
+
+    // --- Beillesztés a keresőmezőbe ---
+    async function pasteToSearch() {
+        try {
+            const text = await navigator.clipboard.readText();
+            const textarea = document.getElementById('searchPrompt');
+            if (text) {
+                if (textarea.value.length > 0) textarea.value += " " + text;
+                else textarea.value = text;
+                textarea.focus();
+                showBubble("📋 Tartalom beillesztve!");
+            }
+        } catch (err) {
+            alert("Nem sikerült olvasni a vágólapot.");
+        }
+    }
+
+    function addAmbient() {
+        const searchInput = document.getElementById('searchPrompt');
+        const separator = searchInput.value.length > 0 ? " " : "";
+        searchInput.value += separator + "ambient ambience";
+        searchInput.focus();
+        showBubble("🌿 'ambient ambience' hozzáadva");
+    }
+
+    function openExternal(url) { window.open(url, '_blank'); }
+
+    // --- History kezelés ---
+    function loadHistoryFromStorage() {
+        const stored = localStorage.getItem('groq_history_v6.2');
+        if (stored) {
+            try {
+                historyData = JSON.parse(stored);
+                if (historyData.length > 0) {
+                    historyIndex = historyData.length - 1;
+                    updateHistoryView();
+                } else { resetHistoryUI(); }
+            } catch (e) { resetHistoryUI(); }
+        } else { resetHistoryUI(); }
+    }
+
+    function saveHistory(content) {
+        if (content.includes("HIBA") || content.includes("Loading")) return;
+        historyData.push({ id: Date.now(), content: content });
+        historyIndex = historyData.length - 1;
+        localStorage.setItem('groq_history_v6.2', JSON.stringify(historyData));
+        updateHistoryView();
+    }
+
+    function updateHistoryView() {
+        if (historyData.length > 0 && historyIndex >= 0 && historyIndex < historyData.length) {
+            const content = historyData[historyIndex].content;
+            outputDiv.innerHTML = content;
+            ensureCopyButton();
+        } else {
+            outputDiv.innerHTML = "Nincs megjeleníthető elemzés.";
+            ensureCopyButton();
+        }
+        historyCounter.innerText = `${historyIndex + 1} / ${historyData.length}`;
+        btnPrev.disabled = (historyIndex <= 0);
+        btnNext.disabled = (historyIndex >= historyData.length - 1);
+    }
+
+    function ensureCopyButton() {
+        if (!document.querySelector('.copy-btn')) {
+            const btn = document.createElement('button');
+            btn.className = 'copy-btn';
+            btn.onclick = copyOutput;
+            btn.innerHTML = '📋 Copy';
+            btn.title = "Másolás a vágólapra";
+            outputDiv.appendChild(btn);
+        }
+    }
+
+    function navHistory(direction) {
+        const newIndex = historyIndex + direction;
+        if (newIndex >= 0 && newIndex < historyData.length) {
+            historyIndex = newIndex;
+            updateHistoryView();
+        }
+    }
+
+    function clearHistory() {
+        if (confirm("Biztosan törlöd?")) {
+            historyData = [];
+            historyIndex = -1;
+            localStorage.removeItem('groq_history_v6.2');
+            resetHistoryUI();
+            outputDiv.innerHTML = "Elemzések törölve.";
+            ensureCopyButton();
+        }
+    }
+
+    function resetHistoryUI() {
+        historyCounter.innerText = "0 / 0";
+        btnPrev.disabled = true;
+        btnNext.disabled = true;
+    }
+
+    // --- Linkek kezelése (smart logic) ---
+    outputDiv.addEventListener('click', function (e) {
+        if (e.target.tagName === 'A') {
+            let href = e.target.getAttribute('href');
+            if (href && (href.includes('youtube.com') || href.includes('youtu.be'))) {
+                e.preventDefault();
+                let url = href;
+                if (!url.startsWith('http')) url = 'https://' + url;
+                videoUrlInput.value = url;
+                showBubble("▶ Link átvezetve a lejátszáshoz...");
+                document.querySelector('.separator').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                playAudioOnly();
+            }
+        }
+    });
+
+    // --- Egyszerű szöveg‑konvertáló (markdown helyett) ---
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function (m) { return map[m]; });
+    }
+
+    function renderPlain(text) {
+        // Escape HTML
+        let escaped = escapeHtml(text);
+
+        // Egyszerű listák ( - vagy 1. ) -> <ul>/<ol>
+        const lines = escaped.split('\n');
+        let html = '';
+        let inList = false;
+        let listTag = '';
+
+        lines.forEach(line => {
+            const trimmed = line.trim();
+            if (/^[-–•]\s+/.test(trimmed)) {
+                if (!inList) { inList = true; listTag = 'ul'; html += `<${listTag}>`; }
+                const item = trimmed.replace(/^[-–•]\s+/, '');
+                html += `<li>${item}</li>`;
+            } else if (/^\d+\.\s+/.test(trimmed)) {
+                if (!inList) { inList = true; listTag = 'ol'; html += `<${listTag}>`; }
+                const item = trimmed.replace(/^\d+\.\s+/, '');
+                html += `<li>${item}</li>`;
+            } else {
+                if (inList) { html += `</${listTag}>`; inList = false; listTag = ''; }
+                if (trimmed.length > 0) {
+                    // Fejléc egyszerűsítve
+                    if (/^##\s+/.test(trimmed)) {
+                        html += `<h2>${trimmed.replace(/^##\s+/, '')}</h2>`;
+                    } else if (/^#\s+/.test(trimmed)) {
+                        html += `<h1>${trimmed.replace(/^#\s+/, '')}</h1>`;
+                    } else {
+                        html += `<p>${trimmed}</p>`;
+                    }
+                }
+            }
+        });
+        if (inList) { html += `</${listTag}>`; }
+
+        return html;
+    }
+
+    // --- 1. Keresés ---
+    async function runVideoSearch() {
+        const key = getKey();
+        const prompt = document.getElementById('searchPrompt').value.trim();
+        if (!key) return logError("Hiányzik az API kulcs!");
+        if (!prompt) return logError("Adj meg egy témát!");
+        localStorage.setItem('safe_groq_key', key);
+        showBubble("🔎 Keresés...");
+
+        const agentPrompt = `Keress rá YouTube-on a következőre: "${prompt}". 
+Sorolj fel 3‑4 videót.
+Használj **Markdown** formátumot a linkekhez: [Videó címe](URL).
+Minden videóhoz írj egy rövid összefoglalót.`;
+
+        try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: "groq/compound",
+                    messages: [{ role: "user", content: agentPrompt }],
+                    max_tokens: 2048
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error?.message || "Hiba a kérésben");
+            const rawContent = `## Keresés: "${prompt}"\n\n` + data.choices[0].message.content;
+            const htmlContent = renderPlain(rawContent);
+            outputDiv.innerHTML = htmlContent;
+            saveHistory(htmlContent);
+            showBubble("✅ Keresés kész!");
+        } catch (err) {
+            logError(err.message);
+        }
+    }
+
+    // --- 2. Elemzés ---
+    async function processVideo() {
+        const key = getKey();
+        const url = videoUrlInput.value.trim();
+        if (!key) return logError("Hiányzik az API kulcs!");
+        if (!url) return logError("Add meg az URL-t!");
+        localStorage.setItem('safe_groq_key', key);
+        showBubble("🔎 Elemzés...");
+
+        const prompt = `Elemezd ezt a YouTube videót: ${url}. 
+Készíts részletes, magyar nyelvű összefoglalót.
+Használj **Markdown** formátumot (felsorolások, félkövér szöveg).`;
+
+        try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: "groq/compound",
+                    messages: [{ role: "user", content: prompt }]
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error?.message || "Hiba a kérésben");
+            const rawContent = `## Videó elemzés\n\n` + data.choices[0].message.content;
+            const htmlContent = renderPlain(rawContent);
+            outputDiv.innerHTML = htmlContent;
+            saveHistory(htmlContent);
+            showBubble("✅ Elemzés kész! ▶ TTS indítása...");
+            setTimeout(() => { startTTS(); }, 500);
+        } catch (err) {
+            logError(err.message);
+        }
+    }
+
+    // --- 3. YouTube lejátszás ---
+    function playAudioOnly() {
+        const url = videoUrlInput.value.trim();
+        const videoId = extractVideoID(url);
+        if (!videoId) return logError("Érvénytelen URL!");
+        audioControls.style.display = 'block';
+        showBubble(`▶ Lejátszás: ${videoId}`);
+
+        if (player) {
+            player.loadVideoById(videoId);
+            player.setVolume(currentVolume);
+            player.setPlaybackRate(currentSpeed);
+        } else {
+            player = new YT.Player('player', {
+                height: '1',
+                width: '1',
+                videoId: videoId,
+                playerVars: { autoplay: 1, controls: 0 },
+                events: {
+                    onReady: e => {
+                        e.target.playVideo();
+                        e.target.setVolume(currentVolume);
+                        e.target.setPlaybackRate(currentSpeed);
+                    },
+                    onStateChange: e => {
+                        if (e.data === YT.PlayerState.PLAYING) btnPlayPause.innerText = "⏸ Pause";
+                        else btnPlayPause.innerText = "▶ Play";
+                    }
+                }
+            });
+        }
+    }
+
+    function togglePlay() {
+        if (!player) return;
+        const state = player.getPlayerState();
+        if (state === YT.PlayerState.PLAYING) {
+            player.pauseVideo();
+            btnPlayPause.innerText = "▶ Play";
+        } else {
+            player.playVideo();
+            btnPlayPause.innerText = "⏸ Pause";
+        }
+    }
+
+    function stopAudio() {
+        if (player) {
+            player.stopVideo();
+            btnPlayPause.innerText = "▶ Play";
+            showBubble("⏹ Leállítva");
+        }
+    }
+
+    function changeSpeed(delta) {
+        currentSpeed = Math.max(0.25, Math.min(3.0, parseFloat((currentSpeed + delta).toFixed(2))));
+        if (player) player.setPlaybackRate(currentSpeed);
+        speedDisplay.innerText = `${currentSpeed}x`;
+        showBubble(`⚡ Sebesség: ${currentSpeed}x`);
+    }
+
+    function setVolume(vol) {
+        if (player) {
+            player.setVolume(vol);
+            currentVolume = vol;
+            volDisplay.innerText = `Hangerő: ${vol}%`;
+            showBubble(`🔊 Hangerő: ${vol}%`);
+        }
+    }
+
+    // --- TTS (szöveg‑felolvasó) ---
+    const synth = window.speechSynthesis;
+    let currentSentences = [];
+    let currentSentenceIndex = -1;
+    let currentUtterance = null;
+    let isPlaying = false;
+    let ttsInterrupted = false;
+    let useWordBasedPauses = true;
+
+    const szunetSzabalyok = {
+        "hogy": [[0, 0], [0, 0]],
+        "mert": [[0, 0], [0, 0]],
+        "hiszen": [[0, 100], [0, 0]],
+        "de": [[5, 300], [0, 1]],
+        "viszont": [[50, 200], [0, 1]],
+        "azonban": [[80, 250], [0, 1]],
+        "tehát": [[80, 100], [0, 0]],
+        "így": [[50, 150], [0, 0]],
+        "vagy": [[100, 200], [0, 0]],
+        "illetve": [[100, 200], [0, 0]],
+        "persze": [[30, 100], [0, 1]],
+        "ugyanis": [[60, 150], [0, 1]],
+        "csak": [[20, 80], [0, 0]],
+        "most": [[20, 80], [0, 0]],
+        "végül": [[80, 200], [0, 1]],
+        "nos": [[100, 300], [10, 50]],
+        "hát": [[50, 150], [5, 30]],
+        "ugye": [[20, 80], [0, 1]],
+        "lám": [[50, 130], [0, 1]],
+        "mindenesetre": [[80, 200], [0, 1]],
+        "tulajdonképpen": [[70, 170], [0, 1]]
+    };
+
+    const randomIdo = tartomany => {
+        const [min, max] = tartomany;
+        if (min === 0 && max === 0) return 0;
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    };
+
+    function splitIntoSentences(text, wordBased = false) {
+        if (wordBased) {
+            const kulcsszavak = Object.keys(szunetSzabalyok);
+            const szavakRegex = kulcsszavak.map(szo => `(?=\\b${szo}\\b)|(?<=\\b${szo}\\b)`).join('|');
+            const regex = new RegExp(`(?<=[.!?])\\s+|${szavakRegex}`, 'i');
+            return text.split(regex).map(s => s.trim()).filter(s => s.length > 0);
+        } else {
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+            return sentences.map(s => s.trim()).filter(s => s.length > 0);
+        }
+    }
+
+    function calculatePause(sentence, nextSentence) {
+        const darab = sentence.trim();
+        const tisztaSzo = darab.replace(/[.!?,;:]/g, '').toLowerCase();
+        let finalPause = 0;
+        if (useWordBasedPauses) {
+            if (/[.!?]/.test(darab)) finalPause = parseInt(document.getElementById('pauseMs').value) || 0;
+            if (szunetSzabalyok[tisztaSzo]) finalPause = randomIdo(szunetSzabalyok[tisztaSzo][1]);
+            if (nextSentence) {
+                const kovetkezo = nextSentence.toLowerCase().trim().replace(/[.!?,;:]/g, '');
+                if (szunetSzabalyok[kovetkezo]) finalPause += randomIdo(szunetSzabalyok[kovetkezo][0]);
+            }
+        } else {
+            finalPause = parseInt(document.getElementById('pauseMs').value) || 500;
+        }
+        return finalPause;
+    }
+
+    function readNextSentence() {
+        const outputArea = document.getElementById('output');
+        if (!isPlaying || currentSentenceIndex >= currentSentences.length - 1) {
+            isPlaying = false;
+            showBubble("✅ Befejezve");
+            outputArea.blur();
+            return;
+        }
+        currentSentenceIndex++;
+        showBubble(`🔊 Felolvasás: ${currentSentenceIndex + 1}/${currentSentences.length}`);
+        const sentence = currentSentences[currentSentenceIndex];
+        const nextSentence = currentSentenceIndex < currentSentences.length - 1 ? currentSentences[currentSentenceIndex + 1] : null;
+        let ttsSzoveg = sentence.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+        if (document.getElementById('readPunctuation') && document.getElementById('readPunctuation').checked) {
+            ttsSzoveg = ttsSzoveg.replace(/\?/g, ' kérdőjel ').replace(/\./g, ' pont ').replace(/\!/g, ' felkiáltójel ');
+        }
+        currentUtterance = new SpeechSynthesisUtterance(ttsSzoveg);
+        currentUtterance.lang = 'hu-HU';
+        const baseRate = parseFloat(document.getElementById('rate').value) || 1;
+        const basePitch = parseFloat(document.getElementById('pitch').value) || 1;
+        currentUtterance.rate = baseRate;
+        currentUtterance.pitch = basePitch;
+        currentUtterance.onend = () => {
+            const pauseMs = calculatePause(sentence, nextSentence);
+            setTimeout(() => { if (isPlaying && !ttsInterrupted) readNextSentence(); }, pauseMs);
+        };
+        currentUtterance.onerror = () => { isPlaying = false; showBubble("⚠ Hiba a felolvasásnál"); };
+        synth.speak(currentUtterance);
+    }
+
+    async function felolvasas(szoveg) {
+        if (synth.speaking) synth.cancel();
+        ttsInterrupted = false;
+        const plainText = szoveg.replace(/[#*`_>\[\]]/g, '');
+        currentSentences = splitIntoSentences(plainText, useWordBasedPauses);
+        currentSentenceIndex = -1;
+        isPlaying = true;
+        showBubble("▶ Indítás...");
+        readNextSentence();
+    }
+
+    function startTTS() {
+        const textToRead = outputDiv.innerText;
+        if (!textToRead || textToRead.includes("Üdvözöllek!")) {
+            showBubble("⚠ Nincs mit felolvasni!");
+            return;
+        }
+        felolvasas(textToRead);
+    }
+
+    function stopTTS() {
+        if (synth.speaking) {
+            synth.cancel();
+            isPlaying = false;
+            ttsInterrupted = true;
+            showBubble("⏹ TTS leállítva");
+        }
+    }
+</script>
+</body>
+</html>
