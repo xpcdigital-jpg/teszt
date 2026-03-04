@@ -1,0 +1,815 @@
+
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSearch Reader - Kimi + Jina + Fordítás</title>
+    <script src="https://js.puter.com/v2/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Syne:wght@400;600&family=Courier+Prime&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Syne', sans-serif; padding: 20px; background: #0f0f1a; color: #e0e0ff; margin: 0; }
+        h2 { font-family: 'Orbitron', sans-serif; color: #00ff9d; text-align: center; border-bottom: 2px solid #2d2d4d; padding-bottom: 10px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .controls, #chat-container, .search-results-container { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #2d2d4d; }
+        textarea { width: 100%; font-family: 'Courier Prime', monospace; padding: 10px; background: #0a0a15; color: #e0e0ff; border: 2px solid #00ff9d; border-radius: 6px; font-size: 18px; resize: vertical; }
+        button { font-family: 'Orbitron', monospace; cursor: pointer; padding: 10px 20px; border: none; border-radius: 6px; background: linear-gradient(135deg, #00b894 0%, #00a085 100%); color: white; margin: 5px; transition: 0.3s; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,255,157,0.4); }
+        #micBtn.mic-active { background: #ff4757; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 20px #ff4757; } 50% { box-shadow: 0 0 40px #ff4757; } }
+        .user-msg { font-family: 'Orbitron', monospace; color: #00ff9d; margin-bottom: 5px; cursor: pointer; }
+        .ai-msg { color: #ffcc88; line-height: 1.6; cursor: pointer; }
+        .ai-msg code { background: #2d2d4d; padding: 2px 5px; border-radius: 4px; }
+        .ai-msg pre { background: #0a0a15; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        .search-results-container { display: block; }
+        .search-result-item { margin-bottom: 15px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 3px solid #00ff9d; }
+        .search-result-title { font-weight: bold; color: #a0a0ff; }
+        .search-result-title a { color: inherit; text-decoration: none; }
+        .search-result-title a:hover { text-decoration: underline; color: #00ff9d; }
+        .search-result-source { display: inline-block; padding: 2px 8px; background: #333; border-radius: 4px; font-size: 0.8em; margin-right: 10px; }
+        .jina-btn { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); font-size: 0.85em; }
+        .dual-view-container { display: flex; gap: 15px; margin-top: 15px; }
+        .dual-column { flex: 1; background: #0a0a15; padding: 15px; border-radius: 8px; border: 1px solid #334155; max-height: 400px; overflow-y: auto; }
+        .jina-badge { font-size: 0.75em; padding: 4px 10px; border-radius: 4px; }
+        .bg-jina-orig { background: #64748b; }
+        .bg-jina-trans { background: #10b981; }
+        .translation-box { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .lang-btn { display: inline-block; padding: 5px 10px; background: #333; color: #a0a0ff; border-radius: 4px; cursor: pointer; margin: 2px; }
+        .lang-btn.active { background: #00ff9d; color: #000; }
+        .reading-status { color: #8888cc; margin: 10px 0; }
+        .reading-status.active { color: #00ff9d; }
+        .pause-mode-toggle { background: linear-gradient(90deg, #0066cc, #0099ff); }
+        .pause-mode-display { display: inline-block; padding: 5px 10px; margin-left: 10px; background: #333; border-radius: 4px; }
+        .pause-mode-display.word-mode { background: linear-gradient(90deg, #333, #0066cc); color: #00ff9d; }
+        .key-hint { font-size: 0.8em; color: #8888cc; margin-top: 10px; }
+        #animation-overlay { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); font-family: 'Orbitron'; font-size: 2em; color: #00ff9d; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; opacity: 0; transition: 0.3s; pointer-events: none; }
+        .bubble-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+        .notification-bubble { background: rgba(0,255,0,0.9); color: #000; border-radius: 50%; width: 200px; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: scale(0.5); transition: 0.3s; }
+        .bubble-visible { opacity: 1; transform: scale(1); }
+        .bubble-layer { font-size: 5rem; line-height: 1; }
+        .model-signature-bubble { margin-top: 15px; padding: 8px 15px; background: rgba(0,255,157,0.1); border: 1px solid #00ff9d; border-radius: 20px; color: #00ff9d; display: inline-block; }
+        
+        /* FF.NET Quick Search stílusok */
+        .quick-search-container { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        #genreSelect { padding: 10px; border-radius: 6px; background: #0a0a15; color: #e0e0ff; border: 1px solid #2d2d4d; font-family: 'Syne', sans-serif; }
+        .btn-ff { background: linear-gradient(135deg, #6c5ce7 0%, #4834d4 100%); }
+        .btn-ff:hover { box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4); }
+
+        /* ÚJ: Jina Elemzés gomb stílus */
+        .btn-jina-action { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); font-weight: bold; }
+        .btn-jina-action:hover { box-shadow: 0 5px 15px rgba(155, 89, 182, 0.4); transform: translateY(-2px); }
+
+        /* ÚJ: Navigációs sáv stílusok */
+        .history-nav { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px; padding: 10px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; border: 1px solid #2d2d4d; }
+        .nav-btn { background: #2d2d4d; border: 1px solid #4a4a6a; color: #a0a0ff; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'Orbitron', sans-serif; font-size: 0.9em; transition: all 0.2s; min-width: 120px; }
+        .nav-btn:hover:not(:disabled) { background: #3d3d6d; color: #fff; border-color: #00ff9d; transform: translateY(-1px); }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+        .nav-btn-trash { background: rgba(255, 71, 87, 0.1); border-color: #ff4757; color: #ff4757; min-width: auto; padding: 8px 12px; }
+        .nav-btn-trash:hover:not(:disabled) { background: #ff4757; color: white; box-shadow: 0 0 10px rgba(255, 71, 87, 0.4); }
+        .nav-info { font-size: 0.8em; color: #6c757d; font-family: 'Courier Prime', monospace; }
+
+        /* API Kulcs Popup Stílus */
+        .api-popup {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 2px solid #00ff9d; border-radius: 12px; padding: 25px;
+            width: 400px; z-index: 1000; box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            display: none;
+        }
+        .api-popup h3 { color: #00ff9d; font-family: 'Orbitron'; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .api-popup label { display: block; color: #a0a0ff; margin-top: 15px; font-size: 0.9em; }
+        .api-popup input { width: 100%; box-sizing: border-box; background: #0a0a15; color: #e0e0ff; border: 1px solid #2d2d4d; padding: 8px; border-radius: 4px; margin-top: 5px; font-family: 'Courier Prime', monospace; }
+        .btn-api-save { background: linear-gradient(135deg, #00ff9d 0%, #00b894 100%); color: #000; width: 100%; margin-top: 20px; font-weight: bold; }
+        .btn-api-toggle { background: linear-gradient(135deg, #e67e22 0%, #d35400 100%); width: auto; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>🌐 WebSearch Reader - Kimi + Jina + Fordítás</h2>
+    
+    <!-- API Kulcsok Popup -->
+    <div id="apiKeyPopup" class="api-popup">
+        <h3>🔑 API Kulcsok</h3>
+        <div style="font-size:0.8em; color:#888; margin-bottom:10px;">A kulcsokat a böngésződ menti el.</div>
+        <label>Tavily API Key (tvly-...):</label>
+        <input type="password" id="inputTavily" placeholder="tvly-dev-...">
+        <label>Exa API Key:</label>
+        <input type="password" id="inputExa" placeholder="...">
+        <label>Groq API Key (gsk-...):</label>
+        <input type="password" id="inputGroq" placeholder="gsk-...">
+        <button class="btn-api-save" onclick="saveApiKeys()">💾 Mentés és Bezárás</button>
+    </div>
+
+    <!-- Fordítás beállítások -->
+    <div class="translation-box">
+        <strong>🌐 Kétlépcsős Fordítás</strong>
+        <div style="margin: 10px 0;">
+            <span class="lang-btn active" onclick="switchTargetLang('')">🚫 Nincs</span>
+            <span class="lang-btn" onclick="switchTargetLang('english')">🇬🇧 Angol</span>
+            <span class="lang-btn" onclick="switchTargetLang('german')">🇩🇪 Német</span>
+            <span class="lang-btn" onclick="switchTargetLang('spanish')">🇪🇸 Spanyol</span>
+            <span class="lang-btn" onclick="switchTargetLang('french')">🇫🇷 Francia</span>
+        </div>
+        <select id="postprocess-mode" style="width:100%; padding:8px; background:#0a0a15; color:#e0e0ff; border:1px solid #2d2d4d;">
+            <option value="google" selected>🌍 Google Fordító (visszafordítás)</option>
+        </select>
+        <div class="key-hint">Keresés előtt lefordítja, találatokat visszafordítja magyarra</div>
+    </div>
+
+    <!-- Fő vezérlők -->
+    <div class="controls">
+        <div style="margin-bottom: 15px;">
+            <button onclick="toggleWebSearch()" id="webSearchToggle" style="background:#00b894">🌐 Kettős Web Keresés (BE)</button>
+            <span id="web-search-status" style="color:#00ff9d; margin-left:10px;">Bekapcsolva</span>
+            
+            <!-- ÚJ GOMB: API Kulcsok -->
+            <button class="btn-api-toggle" onclick="toggleApiPopup()">🔑 API Kulcsok</button>
+        </div>
+        
+        <div style="margin: 10px 0;">
+            <label>⏱️ Szünet (ms): <input type="number" id="pauseMs" value="500" min="0" style="width:80px; background:#0a0a15; color:#e0e0ff; border:1px solid #2d2d4d;"></label>
+            <button onclick="togglePauseMode()" class="pause-mode-toggle">⏸️ Szünetmód</button>
+            <span id="pauseModeDisplay" class="pause-mode-display sentence-mode">Mondatos</span>
+        </div>
+        
+        <div class="reading-status" id="reading-status">Állapot: Inaktív</div>
+        <div class="key-hint">
+            Gyorsgombok:<br>
+            [1] Pozíció | [2] Vissza | [3] Előre | [4] Play/Pause | [5] Modell újratöltés<br>
+            [6] Személyiség | [7] Jina indítás | [8] Mikrofon | [9] Fókusz váltás | [0] Rétegváltás<br>
+            [s] Szünetmód | [t] Fordítás nyelv | [w] Webkeresés ki/be<br>
+            🎮 Layer2: [5] Új Jina kérés | [8] Vágólap beillesztés | [W] Memória törlés
+        </div>
+    </div>
+
+    <!-- Szövegbevitel -->
+    <!-- FF.NET QuickSearch Gomb és Legördülő -->
+    <div class="quick-search-container">
+        <button class="btn-ff" onclick="insertQuickSearch()">🔎 FF.NET QuickSearch</button>
+        <select id="genreSelect" onchange="updateGenre()">
+            <option value="" disabled selected>Stílus választása...</option>
+            <option value="Adventure">Adventure (Kaland)</option>
+            <option value="Angst">Angst (Szorongás / Lelki vívódás)</option>
+            <option value="Crime">Crime (Bűnügyi)</option>
+            <option value="Drama">Drama (Dráma)</option>
+            <option value="Family">Family (Családi)</option>
+            <option value="Fantasy">Fantasy (Fantasy)</option>
+            <option value="Friendship">Friendship (Barátság)</option>
+            <option value="General">General (Általános)</option>
+            <option value="Horror">Horror (Horror)</option>
+            <option value="Humor">Humor (Comedy)</option>
+            <option value="Hurt/Comfort">Hurt/Comfort (Sérülés és vigasz)</option>
+            <option value="Mystery">Mystery (Rejtély)</option>
+            <option value="Poetry">Poetry (Költészet)</option>
+            <option value="Romance">Romance (Romantikus)</option>
+            <option value="Sci-Fi">Sci-Fi (Sci-fi)</option>
+            <option value="Spiritual">Spiritual (Spirituális)</option>
+            <option value="Supernatural">Supernatural (Természetfeletti)</option>
+            <option value="Suspense">Suspense (Izgalom / Thriller)</option>
+            <option value="Tragedy">Tragedy (Tragédia)</option>
+            <option value="Western">Western (Western)</option>
+            <option value="Parody">Parody (Paródia)</option>
+        </select>
+    </div>
+
+    <textarea id="kerdes" placeholder="Írd ide a kérdésed..." rows="2" style="font-size:18px;"></textarea>
+    
+    <!-- GOMBOK -->
+    <div style="margin: 10px 0;">
+        <button onclick="valaszkeres()">🚀 Küldés</button>
+        <button id="micBtn">🎤 Mikrofon (8)</button>
+        <button onclick="utolsoValaszUjra()">🔊 Újra (2)</button>
+        <!-- ÚJ GOMB: 7-es megfelelője -->
+        <button onclick="handleJinaSmartAction()" class="btn-jina-action">⚡ Jina Elemzés (7)</button>
+    </div>
+
+    <!-- Chat megjelenítő -->
+    <!-- Navigációs sáv a chat felett -->
+    <div class="history-nav">
+        <button id="btnPrev" class="nav-btn" onclick="navigateHistory(-1)" disabled>&lt; Előző</button>
+        <span id="navInfo" class="nav-info">Új üzenet mód</span>
+        <button id="btnNext" class="nav-btn" onclick="navigateHistory(1)" disabled>Következő &gt;</button>
+        <button class="nav-btn nav-btn-trash" onclick="clearHistory()" title="Előzmények törlése">🗑️</button>
+    </div>
+
+    <div id="chat-container">
+        <div id="user-display" class="user-msg"></div>
+        <div id="divider" style="border-top:2px solid #3d3d6d; margin:15px 0; display:none;"></div>
+        <div id="ai-display" class="ai-msg"></div>
+    </div>
+
+    <!-- Keresési eredmények -->
+    <div class="search-results-container" id="search-results-container">
+        <div style="font-family:'Orbitron'; color:#00ff9d; margin-bottom:15px;">🔍 Keresési eredmények</div>
+        <div id="search-results-list"></div>
+        <div id="search-results-stats" style="margin-top:15px; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; text-align:center;"></div>
+    </div>
+</div>
+
+<div id="animation-overlay" class="animation-overlay"></div>
+<div class="bubble-container"><div class="notification-bubble" id="notificationBubble"><div class="bubble-layer" id="bubbleLayer">1</div><div class="bubble-text" id="bubbleText"></div></div></div>
+
+<script>
+    // ========== KONFIGURÁCIÓ (DINAMIKUS) ==========
+    // A kulcsokat nem hardcode-oljuk, hanem localStorage-ból olvassuk be.
+    let TAVILY_KEY = "";
+    let EXA_KEY = "";
+    let GROQ_KEY = "";
+    
+    // Állapotváltozók
+    let chatHistory = [], utolsoAiValasz = "", isRecording = false, isThinking = false;
+    let currentSentences = [], currentSentenceIndex = -1, isPlaying = false;
+    let currentLayer = 1, currentPersona = 'kimi', isWebSearchEnabled = true;
+    let targetLanguage = 'english', postProcessMode = 'google', useWordBasedPauses = false;
+    let lastSearchResults = [], contextStartIndex = 0, isJinaReading = false;
+    let currentJinaOriginalText = "", jina7PressCount = 0, jinaTextBlocks = [], jinaCurrentBlockIndex = 0;
+    let currentFocusArea = 0, lastActiveJinaIndex = null, key9Pressed = false, key1Pressed = false;
+    
+    // Navigációs és Perzisztencia változók
+    let currentAnswerIndex = -1; 
+
+    const synth = window.speechSynthesis;
+    const audioCtx = new AudioContext();
+    let recognition, thinkingSoundInterval;
+
+    // ========== API KEY KEZELÉS ==========
+    function loadApiKeys() {
+        const saved = JSON.parse(localStorage.getItem('wsr_api_keys_v1') || '{}');
+        if (saved.tavily) TAVILY_KEY = saved.tavily;
+        if (saved.exa) EXA_KEY = saved.exa;
+        if (saved.groq) GROQ_KEY = saved.groq;
+
+        // Inputok feltöltése
+        document.getElementById('inputTavily').value = TAVILY_KEY;
+        document.getElementById('inputExa').value = EXA_KEY;
+        document.getElementById('inputGroq').value = GROQ_KEY;
+    }
+
+    function saveApiKeys() {
+        const tKey = document.getElementById('inputTavily').value.trim();
+        const eKey = document.getElementById('inputExa').value.trim();
+        const gKey = document.getElementById('inputGroq').value.trim();
+
+        TAVILY_KEY = tKey;
+        EXA_KEY = eKey;
+        GROQ_KEY = gKey;
+
+        const data = { tavily: tKey, exa: eKey, groq: gKey };
+        localStorage.setItem('wsr_api_keys_v1', JSON.stringify(data));
+        
+        toggleApiPopup();
+        showAnimation('Kulcsok elmentve');
+    }
+
+    function toggleApiPopup() {
+        const popup = document.getElementById('apiKeyPopup');
+        if (popup.style.display === 'block') {
+            popup.style.display = 'none';
+        } else {
+            // Frissítjük az értékeket megnyitáskor
+            document.getElementById('inputTavily').value = TAVILY_KEY;
+            document.getElementById('inputExa').value = EXA_KEY;
+            document.getElementById('inputGroq').value = GROQ_KEY;
+            popup.style.display = 'block';
+        }
+    }
+
+    // ========== SEGÉDFÜGGVÉNYEK ==========
+    function showAnimation(text) {
+        document.getElementById('animation-overlay').style.cssText = `opacity:1; content:'${text}';`;
+        setTimeout(() => document.getElementById('animation-overlay').style.opacity = '0', 1500);
+    }
+    
+    function speakText(text, pitch=1.0, volume=1.0) {
+        if (synth.speaking) synth.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'hu-HU'; utter.rate = 1.0; utter.pitch = pitch; utter.volume = volume;
+        synth.speak(utter);
+    }
+    
+    function updatePauseModeDisplay() {
+        const el = document.getElementById('pauseModeDisplay');
+        el.textContent = `Mód: ${useWordBasedPauses ? 'Szavas' : 'Mondatos'}`;
+        el.className = `pause-mode-display ${useWordBasedPauses ? 'word-mode' : 'sentence-mode'}`;
+    }
+    
+    function togglePauseMode() { useWordBasedPauses = !useWordBasedPauses; updatePauseModeDisplay(); showAnimation(useWordBasedPauses ? 'Szavas mód' : 'Mondatos mód'); }
+    
+    function switchTargetLang(lang) {
+        targetLanguage = lang;
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        showAnimation(`Fordítás: ${lang || 'Nincs'}`);
+    }
+    
+    function toggleWebSearch() {
+        isWebSearchEnabled = !isWebSearchEnabled;
+        updateWebSearchUI();
+    }
+
+    function updateWebSearchUI() {
+        const btn = document.getElementById('webSearchToggle');
+        const status = document.getElementById('web-search-status');
+        if (isWebSearchEnabled) {
+            btn.style.background = '#00b894';
+            btn.innerText = '🌐 Kettős Web Keresés (BE)';
+            status.textContent = 'Bekapcsolva';
+            status.style.color = '#00ff9d';
+        } else {
+            btn.style.background = '#666';
+            btn.innerText = '🌐 Kettős Web Keresés (KI)';
+            status.textContent = 'Kikapcsolva';
+            status.style.color = '#ff4757';
+        }
+    }
+
+    function forceDisableWebSearch() {
+        if (isWebSearchEnabled) {
+            isWebSearchEnabled = false;
+            updateWebSearchUI();
+            showAnimation('Web Keresés KI');
+        }
+    }
+
+    // ========== PERZISZTENCIA ==========
+    function saveChat() {
+        localStorage.setItem('wsr_chat_history', JSON.stringify(chatHistory));
+    }
+
+    function loadChat() {
+        const saved = localStorage.getItem('wsr_chat_history');
+        if (saved) {
+            try {
+                chatHistory = JSON.parse(saved);
+                if (chatHistory.length > 0) {
+                    currentAnswerIndex = Math.floor(chatHistory.length / 2) - 1;
+                    renderAnswer(currentAnswerIndex);
+                }
+            } catch (e) {
+                console.error("Hiba a betöltéskor:", e);
+            }
+        }
+    }
+
+    // ========== Navigációs Rendszer ==========
+    function renderAnswer(index) {
+        const userMsg = chatHistory[index * 2];
+        const aiMsg = chatHistory[index * 2 + 1];
+        
+        if (userMsg) {
+            document.getElementById('user-display').innerText = '👤 TE: ' + userMsg.text;
+            document.getElementById('divider').style.display = 'block';
+        }
+        if (aiMsg) {
+            document.getElementById('ai-display').innerHTML = marked.parse(aiMsg.text) + 
+                '<div class="model-signature-bubble">Kimi K2 (Groq) [Történet]</div>';
+        }
+
+        updateNavButtons();
+    }
+
+    function updateNavButtons() {
+        const totalAnswers = Math.floor(chatHistory.length / 2);
+        const navInfo = document.getElementById('navInfo');
+        
+        document.getElementById('btnPrev').disabled = currentAnswerIndex <= 0;
+        document.getElementById('btnNext').disabled = currentAnswerIndex >= totalAnswers - 1;
+        
+        if (currentAnswerIndex === -1) {
+            navInfo.innerText = "Új üzenet mód";
+        } else {
+            navInfo.innerText = `${currentAnswerIndex + 1} / ${totalAnswers}`;
+        }
+    }
+
+    function navigateHistory(dir) {
+        const totalAnswers = Math.floor(chatHistory.length / 2);
+        let newIndex = currentAnswerIndex + dir;
+        
+        if (newIndex >= 0 && newIndex < totalAnswers) {
+            currentAnswerIndex = newIndex;
+            renderAnswer(currentAnswerIndex);
+            if (synth.speaking) synth.cancel();
+        }
+    }
+
+    function clearHistory() {
+        if(confirm("Biztosan törlöd az összes mentett beszélgetést?")) {
+            chatHistory = [];
+            currentAnswerIndex = -1;
+            localStorage.removeItem('wsr_chat_history');
+            document.getElementById('user-display').innerText = "";
+            document.getElementById('ai-display').innerText = "";
+            document.getElementById('divider').style.display = 'none';
+            updateNavButtons();
+            showAnimation('Történet törölve');
+        }
+    }
+
+    // ========== FF.NET QUICK SEARCH ==========
+    function insertQuickSearch() {
+        const query = 'site:fanfiction.net "Ch 1 of" "hitman" "blood" comedy';
+        document.getElementById('kerdes').value = query;
+        document.getElementById('genreSelect').value = ""; 
+        document.getElementById('kerdes').focus();
+    }
+
+    function updateGenre() {
+        const textarea = document.getElementById('kerdes');
+        let text = textarea.value.trim();
+        const newGenre = document.getElementById('genreSelect').value;
+        
+        if (!newGenre) return;
+        const lastSpaceIndex = text.lastIndexOf(' ');
+        
+        if (lastSpaceIndex !== -1) {
+            const newText = text.substring(0, lastSpaceIndex + 1) + newGenre;
+            textarea.value = newText;
+        } else {
+            textarea.value = text + " " + newGenre;
+        }
+    }
+
+    // ========== KERESÉS ==========
+    async function searchTavily(query) {
+        if(!TAVILY_KEY) { console.warn("Hiányzó Tavily Key"); return null; }
+        try {
+            const r = await fetch('https://api.tavily.com/search', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ api_key: TAVILY_KEY, query, max_results: 3 })
+            });
+            return await r.json();
+        } catch { return null; }
+    }
+    
+    async function searchExa(query) {
+        if(!EXA_KEY) { console.warn("Hiányzó Exa Key"); return null; }
+        try {
+            const r = await fetch('https://api.exa.ai/search', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': EXA_KEY },
+                body: JSON.stringify({ query, numResults: 3, contents: { text: { maxCharacters: 2000 } } })
+            });
+            return await r.json();
+        } catch { return null; }
+    }
+    
+    async function translateGoogle(text) {
+        if (!text) return "";
+        try {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=hu&dt=t&q=${encodeURIComponent(text.substring(0,4000))}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            return data[0].map(item => item[0]).join('');
+        } catch { return text; }
+    }
+    
+    async function performDeepSearch(query) {
+        if (!isWebSearchEnabled) return null;
+        
+        let searchQuery = query;
+        if (targetLanguage && GROQ_KEY) {
+            try {
+                const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'llama-3.1-8b-instant',
+                        messages: [{ role: 'user', content: `Translate to ${targetLanguage}: ${query}` }],
+                        temperature: 0.1
+                    })
+                });
+                const d = await r.json();
+                searchQuery = d.choices[0].message.content;
+            } catch {}
+        }
+        
+        const [tavily, exa] = await Promise.all([searchTavily(searchQuery), searchExa(searchQuery)]);
+        lastSearchResults = [];
+        
+        if (tavily?.results) tavily.results.forEach(r => lastSearchResults.push({ title: r.title, url: r.url, content: r.content, source: 'tavily' }));
+        if (exa?.results) exa.results.forEach(r => lastSearchResults.push({ title: r.title, url: r.url, content: r.text, source: 'exa' }));
+        
+        for (let r of lastSearchResults) {
+            r.contentTranslated = await translateGoogle(r.content);
+        }
+        
+        displaySearchResults();
+        
+        let context = "KERESÉSI EREDMÉNYEK:\n";
+        lastSearchResults.forEach((r,i) => context += `${i+1}. ${r.title}\n${r.content.substring(0,300)}...\nFordítás: ${r.contentTranslated.substring(0,200)}...\n\n`);
+        return context;
+    }
+    
+    function displaySearchResults() {
+        const list = document.getElementById('search-results-list');
+        const stats = document.getElementById('search-results-stats');
+        list.innerHTML = '';
+        
+        lastSearchResults.forEach((r, i) => {
+            const safeUrl = r.url.replace(/"/g, '&quot;');
+            const safeTitle = r.title.replace(/'/g, "\\'");
+            
+            list.innerHTML += `
+                <div class="search-result-item">
+                    <div class="search-result-title">
+                        <a href="${safeUrl}" target="_blank" title="Megnyitás új lapon">${i+1}. ${r.title} 🔗</a>
+                    </div>
+                    <span class="search-result-source">${r.source}</span>
+                    
+                    <div style="margin: 5px 0;">
+                        <button class="jina-btn" onclick="processJinaPage('${safeUrl}', '${safeTitle}', ${i})">🚀 Jina Olvasó</button>
+                    </div>
+
+                    <div style="margin-bottom: 5px;">${r.content.substring(0,200)}...</div>
+                    <div style="color:#ffcc88; margin-bottom: 5px;">🇭🇺 ${r.contentTranslated.substring(0,200)}...</div>
+                    
+                    <div style="font-size: 0.85em; margin-top: 5px; word-break: break-all;">
+                        🌐 <a href="${safeUrl}" target="_blank" style="color: #00ff9d;">${safeUrl}</a>
+                    </div>
+                    
+                    <div id="jina-view-${i}" class="dual-view-container" style="display:none;">
+                        <div class="dual-column"><span class="jina-badge bg-jina-orig">Eredeti</span><div id="jina-orig-${i}"></div></div>
+                        <div class="dual-column"><span class="jina-badge bg-jina-trans">Magyar</span><div id="jina-trans-${i}"></div></div>
+                    </div>
+                </div>
+            `;
+        });
+        stats.innerHTML = `Találatok: ${lastSearchResults.length}`;
+    }
+    
+    // ========== JINA OLVASÓ ==========
+    async function processJinaPage(url, title, index) {
+        forceDisableWebSearch();
+        lastActiveJinaIndex = index;
+        jina7PressCount = 0; jinaCurrentBlockIndex = 0; jinaTextBlocks = [];
+        const viewDiv = document.getElementById(`jina-view-${index}`);
+        const origDiv = document.getElementById(`jina-orig-${index}`);
+        const transDiv = document.getElementById(`jina-trans-${index}`);
+        
+        try {
+            const res = await fetch(`https://r.jina.ai/${url}`, { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            let content = data.data.content.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1').replace(/!\[.*?\]\(.*?\)/g, '').replace(/https?:\/\/\S+/g, '').trim();
+            
+            currentJinaOriginalText = content;
+            origDiv.innerText = content;
+            viewDiv.style.display = 'flex';
+            
+            transDiv.innerText = "Fordítás...";
+            transDiv.innerText = await translateGoogle(content);
+            
+            currentFocusArea = 2;
+            isJinaReading = true;
+            felolvasas(transDiv.innerText);
+        } catch (e) {
+            showAnimation("Jina hiba");
+        }
+    }
+    
+    // ========== KIMI HÍVÁS ==========
+    async function callKimi(text, searchContext = "") {
+        const finalText = searchContext ? `${searchContext}\n\n${text}` : text;
+        try {
+            const r = await puter.ai.chat(finalText, { model: 'kimi-k2' });
+            return r?.message?.content || String(r);
+        } catch { throw new Error('Kimi API hiba'); }
+    }
+    
+    // ========== FELOLVASÁS ==========
+    function splitIntoSentences(text) {
+        if (useWordBasedPauses) return text.split(/(?<=[.!?])\s+|(?=\b(?:hogy|mert|de|ezért)\b)/i).filter(s => s.trim());
+        return text.match(/[^.!?]+[.!?]+/g) || [text];
+    }
+    
+    function felolvasas(szoveg) {
+        if (synth.speaking) synth.cancel();
+        currentSentences = splitIntoSentences(szoveg.replace(/[*#_`>]/g, '').replace(/https?:\/\/\S+/g, 'link'));
+        currentSentenceIndex = -1;
+        isPlaying = true;
+        document.getElementById('reading-status').innerHTML = 'Állapot: Indítás...';
+        readNextSentence();
+    }
+    
+    function readNextSentence() {
+        if (!isPlaying || currentSentenceIndex >= currentSentences.length-1) {
+            isPlaying = false; isJinaReading = false;
+            document.getElementById('reading-status').innerHTML = 'Állapot: Befejezve';
+            return;
+        }
+        currentSentenceIndex++;
+        document.getElementById('reading-status').innerHTML = `Felolvasás: ${currentSentenceIndex+1}/${currentSentences.length}`;
+        
+        const utter = new SpeechSynthesisUtterance(currentSentences[currentSentenceIndex]);
+        utter.lang = 'hu-HU'; utter.rate = 1.0;
+        utter.onend = () => setTimeout(() => isPlaying && readNextSentence(), parseInt(document.getElementById('pauseMs').value) || 500);
+        synth.speak(utter);
+    }
+    
+    function togglePlayPause() { isPlaying ? (synth.cancel(), isPlaying=false) : (isPlaying=true, readNextSentence()); }
+    
+    // ========== FŐ KÉRDÉSKEZELÉS ==========
+    async function valaszkeres() {
+        const kerdes = document.getElementById('kerdes').value.trim();
+        if (!kerdes) return;
+        
+        document.getElementById('user-display').innerText = '👤 TE: ' + kerdes;
+        document.getElementById('divider').style.display = 'block';
+        document.getElementById('ai-display').innerHTML = '💭 Kimi gondolkodik...';
+        document.getElementById('kerdes').value = '';
+        
+        chatHistory.push({ role: 'user', text: kerdes });
+        
+        isThinking = true;
+        
+        let searchContext = '';
+        if (isWebSearchEnabled) {
+            searchContext = await performDeepSearch(kerdes);
+        }
+        
+        try {
+            const activeMessages = chatHistory.slice(contextStartIndex).slice(-10);
+            const context = activeMessages.map(m => `${m.role}: ${m.text}`).join('\n');
+            const response = await callKimi(context, searchContext);
+            
+            utolsoAiValasz = response;
+            chatHistory.push({ role: 'ai', text: response });
+            
+            currentAnswerIndex = (chatHistory.length / 2) - 1;
+            renderAnswer(currentAnswerIndex);
+            
+            saveChat();
+            
+            felolvasas(response + '. Modell: Kimi');
+            currentFocusArea = 0;
+            isThinking = false;
+            
+        } catch (e) {
+            document.getElementById('ai-display').innerHTML = '❌ Hiba: ' + e.message;
+            isThinking = false;
+        }
+    }
+    
+    function utolsoValaszUjra() { if (utolsoAiValasz) felolvasas(utolsoAiValasz); }
+    
+    // ========== MIKROFON ==========
+    function initSpeechRecognition() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) return;
+        recognition = new SR();
+        recognition.lang = 'hu-HU';
+        recognition.interimResults = false;
+        recognition.onresult = (e) => {
+            document.getElementById('kerdes').value += ' ' + e.results[0][0].transcript;
+        };
+        recognition.onend = () => { isRecording = false; document.getElementById('micBtn').classList.remove('mic-active'); };
+    }
+    initSpeechRecognition();
+    
+    function handleMicButton() {
+        if (isRecording) { recognition.stop(); }
+        else { recognition.start(); isRecording = true; document.getElementById('micBtn').classList.add('mic-active'); }
+    }
+    
+    // ========== JOYPAD ==========
+    function showBubble(layer) {
+        const b = document.getElementById('notificationBubble');
+        document.getElementById('bubbleLayer').textContent = layer;
+        document.getElementById('bubbleText').textContent = layer===1?'Fő funkció':(layer===2?'Web/Jina':'Memória');
+        b.classList.add('bubble-visible');
+        setTimeout(() => b.classList.remove('bubble-visible'), 1500);
+    }
+    
+    function switchLayer() { currentLayer = (currentLayer % 3) + 1; showBubble(currentLayer); }
+    
+    // ========== MÓDOSÍTOTT JINA SMART ACTION ==========
+    async function handleJinaSmartAction() {
+        forceDisableWebSearch();
+        if (!currentJinaOriginalText) { speakText('Nincs betöltött Jina tartalom'); return; }
+        if (jina7PressCount === 0) {
+            const len = currentJinaOriginalText.length;
+            speakText(`${len} karakter`);
+            if (len > 10000) {
+                jinaTextBlocks = [];
+                for (let i=0; i<len; i+=10000) jinaTextBlocks.push(currentJinaOriginalText.substring(i, i+10000));
+                speakText(`${jinaTextBlocks.length} rész, nyomd újra a küldéshez`);
+            } else { jinaTextBlocks = [currentJinaOriginalText]; }
+            jina7PressCount++; return;
+        }
+        
+        if (jinaCurrentBlockIndex < jinaTextBlocks.length) {
+            const block = jinaTextBlocks[jinaCurrentBlockIndex];
+            
+            const promptAnalysis = `Összegezd, majd Kérek róta értékelést a következő szempontok szerint.\n\n` +
+                `- cselekmény: ha a történet nagy része unalmas, semmitmondó párbeszédekből áll, akkor ez az érték 0%. Ha viszont tele van akcióval, lövöldözéssel, meneküléssel, rejtőzködéssel, autós üldözéssel, gyilkossággal, harccal, verekedéssel, kalanddal, felfedezéssel, akkor ez az érték 100%.\n` +
+                `- humorfaktor: ha a humor vagy legalább mosolyra késztetés legkisebb jele sincs benne egyetlen mondatban sem, akkor ez az érték 0%. Ha viszont tele van mindenféle vicces dologgal, a humor számtalan formájával, akkor ez az érték 100%.\n` +
+                `- szavatosság: ha érdekfeszítő, ismeretterjesztő, élvezetes, akár többszöri elolvasásra ajánlott, akkor ez az érték 100%.\n` +
+                `- kreatív megvalósítás: ha a szöveg sablonos, minden második író hasonlót ír, akkor ez a százalék 0%.\n\n` +
+                `Csak a százalékokat kérem. Példa:\n` +
+                `cselekmény x%, humorfaktor x%, szavatosság x%, kreatív megvalósítás x%.\n\n` +
+                `- stílus: maximum 3 szóban, hogy milyen kategóriákba sorolható.\n` +
+                `- megjegyzés: ide maximum két mondatot kérek.\n` +
+                `- hasonlóak: a filmiparból, a játékiparból, a könyvek vagy novellák vagy fanfictionök világából néhány cím felsorolása.\n` +
+                `- végül 1 összesített érték egyetlen százalékban kifejezve.\n\n` +
+                `Szöveg:\n${block}`;
+
+            const promptSummary = `Összegezd a következő szöveget magyarul: ${block}`;
+
+            document.getElementById('user-display').innerText = '👤 TE: ' + 'Elemzés és Összegzés kérése...';
+            document.getElementById('divider').style.display = 'block';
+            document.getElementById('ai-display').innerHTML = '💭 1. Fázis: Részletes elemzés folyamatban...';
+            document.getElementById('kerdes').value = '';
+            
+            isThinking = true;
+
+            try {
+                const responseAnalysis = await callKimi(promptAnalysis);
+                
+                document.getElementById('ai-display').innerHTML = '💭 2. Fázis: Összegzés (2 mp várakozás)...';
+                
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                const responseSummary = await callKimi(promptSummary);
+                
+                const combinedResponse = `${responseAnalysis}\n\n--- ÖSSZEFOGLALÓ ---\n\n${responseSummary}`;
+                
+                document.getElementById('ai-display').innerHTML = marked.parse(combinedResponse) + 
+                    '<div class="model-signature-bubble">Kimi K2 (Dupla Mód: Elemzés + Összegzés)</div>';
+                
+                chatHistory.push({ role: 'user', text: 'Jina Elemzés + Összegzés: ' + block.substring(0, 50) + '...' });
+                chatHistory.push({ role: 'ai', text: combinedResponse });
+                currentAnswerIndex = (chatHistory.length / 2) - 1;
+                renderAnswer(currentAnswerIndex);
+                saveChat();
+                
+                utolsoAiValasz = combinedResponse;
+                
+                felolvasas(combinedResponse);
+                
+                jinaCurrentBlockIndex++;
+                if (jinaCurrentBlockIndex >= jinaTextBlocks.length) {
+                    jina7PressCount = 0;
+                }
+                
+            } catch (e) {
+                document.getElementById('ai-display').innerHTML = '❌ Hiba a feldolgozás során: ' + e.message;
+            } finally {
+                isThinking = false;
+            }
+        }
+    }
+    
+    function clearAiMemory() {
+        contextStartIndex = chatHistory.length;
+        showAnimation('🧠 Memória törölve');
+        document.getElementById('chat-container').innerHTML += '<div style="color:#ff4757; text-align:center;">--- MEMÓRIA TÖRLÉS ---</div>';
+    }
+    
+    // ========== ESEMÉNYKEZELÉS ==========
+    document.addEventListener('keydown', (e) => {
+        if (e.key === '1') key1Pressed = true;
+        if (e.key === '9') key9Pressed = true;
+        
+        if (e.target.tagName !== 'TEXTAREA') {
+            if (e.key === 's') { e.preventDefault(); togglePauseMode(); }
+            if (e.key === 't') { e.preventDefault(); switchTargetLang(targetLanguage==='english'?'german':'english'); }
+            if (e.key === 'w') { e.preventDefault(); toggleWebSearch(); }
+            if (e.key === '0') { e.preventDefault(); switchLayer(); }
+            if (e.key === '8') { e.preventDefault(); handleMicButton(); }
+            if (e.key === '2') { e.preventDefault(); utolsoValaszUjra(); }
+            if (e.key === '4') { e.preventDefault(); togglePlayPause(); }
+            if (e.key === '5') { e.preventDefault(); valaszkeres(); }
+            if (e.key === '7' && currentLayer === 1) { e.preventDefault(); handleJinaSmartAction(); }
+            
+            if (e.key === 'ArrowLeft') { e.preventDefault(); navigateHistory(-1); }
+            if (e.key === 'ArrowRight') { e.preventDefault(); navigateHistory(1); }
+            
+            if (currentLayer === 2) {
+                if (e.key === '8') {
+                    navigator.clipboard.readText().then(t => { document.getElementById('kerdes').value = t; showAnimation('Vágólap beillesztve'); });
+                }
+                if (e.key === 'w') clearAiMemory();
+            }
+            
+            if (key1Pressed && e.key === '7') {
+                const last = chatHistory.filter(m => m.role==='user').pop();
+                if (last) { document.getElementById('kerdes').value = last.text; valaszkeres(); }
+            }
+        }
+    });
+    
+    document.addEventListener('keyup', (e) => {
+        if (e.key === '1') key1Pressed = false;
+        if (e.key === '9') key9Pressed = false;
+    });
+    
+    document.getElementById('micBtn').onclick = handleMicButton;
+    window.onload = () => { 
+        updatePauseModeDisplay(); 
+        loadChat();
+        loadApiKeys(); // API Kulcsok betöltése induláskor
+    };
+</script>
+</body>
+</html>
+
