@@ -1,0 +1,2587 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>a & b (& c) - Hybrid AI Chat v9.9 (Auto-Input Fix)</title>
+<!-- Markdown parser -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- Puter.js -->
+<script src="https://js.puter.com/v2/"></script>
+<!-- Karakter definíciók -->
+<script src="characters.js"></script>
+<!-- Random Topic Generator Modul -->
+<script src="randomtopicgenerator.js"></script>
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+--bg: rgba(10,12,16,1);
+--card: rgba(22,27,34,0.95);
+--gold: rgba(242,206,126,1);
+--blue: rgba(88,166,255,1);
+--red: rgba(255, 107, 107, 1);
+--green: #00ff9d;
+--txt: rgba(240,243,248,1);
+--txt2: rgba(177,186,196,1);
+--border: rgba(255,255,255,0.1);
+--input-bg: #0d1117;
+--accent: #00ff9d; 
+}
+body {
+font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+background: var(--bg); color: var(--txt); min-height: 100vh;
+display: flex; justify-content: center; align-items: flex-start; padding: 20px;
+font-size: 16px;
+}
+.container {
+width: 100%; max-width: 1250px; background: rgba(13,17,23,0.98);
+backdrop-filter: blur(10px); border: 1px solid var(--border);
+border-radius: 28px; padding: 30px; margin-top: 10px;
+box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+}
+h2 {
+font-weight: 400; font-size: 2rem; text-align: center; margin-bottom: 30px;
+background: linear-gradient(135deg, var(--gold) 0%, var(--blue) 50%, var(--red) 100%);
+-webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px;
+}
+.config-section {
+background: rgba(20, 25, 35, 0.6);
+border: 1px solid var(--border); border-radius: 20px; padding: 25px;
+margin-bottom: 25px;
+}
+.config-section h3 {
+font-size: 0.95rem; text-transform: uppercase; letter-spacing: 1.5px;
+color: var(--txt2); margin-bottom: 20px; border-bottom: 1px solid var(--border);
+padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+}
+
+/* --- AI ENGINE GRID --- */
+.engine-grid {
+display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px;
+}
+.engine-card {
+background: rgba(0,0,0,0.25); border-radius: 16px; padding: 20px;
+border-top: 4px solid transparent; display: flex; flex-direction: column; gap: 15px;
+transition: all 0.3s ease; position: relative;
+}
+.engine-card:hover { transform: translateY(-2px); }
+.engine-card.disabled { opacity: 0.4; filter: grayscale(0.8); pointer-events: none; }
+
+.engine-a { border-top-color: var(--gold); }
+.engine-b { border-top-color: var(--blue); }
+.engine-c { border-top-color: var(--red); }
+
+.engine-header { font-weight: 800; font-size: 1.1rem; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+.engine-header.a { color: var(--gold); }
+.engine-header.b { color: var(--blue); }
+.engine-header.c { color: var(--red); }
+
+/* Switch Style */
+.switch { position: relative; display: inline-block; width: 40px; height: 20px; pointer-events: auto !important; margin-left: 10px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider-round { position: absolute; cursor: pointer; inset: 0; background-color: #333; transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.2); }
+.slider-round:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider-round { background-color: var(--red); border-color: var(--red); }
+input:checked + .slider-round:before { transform: translateX(20px); }
+
+.name-input {
+background: transparent; border: none; border-bottom: 1px dashed rgba(255,255,255,0.2);
+color: inherit; font-weight: 800; font-size: 1.1rem; width: 140px; padding: 2px 5px;
+border-radius: 0; box-shadow: none;
+}
+.name-input:focus { outline: none; border-bottom: 1px solid currentColor; box-shadow: none; }
+
+.control-row { display: flex; flex-direction: column; gap: 8px; }
+.control-row label { font-size: 0.75rem; font-weight: 700; color: var(--txt2); text-transform: uppercase; letter-spacing: 0.5px; }
+
+input, select, textarea {
+background: var(--input-bg); border: 1px solid var(--border); color: var(--txt);
+padding: 12px 14px; border-radius: 10px; font-size: 1rem; width: 100%;
+transition: all 0.2s; font-family: inherit;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(88,166,255,0.1); }
+input.whisper-active, textarea.whisper-active {
+    box-shadow: 0 0 15px var(--green) !important;
+    border-color: var(--green) !important;
+    background: rgba(0, 255, 157, 0.05) !important;
+}
+
+select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 14px center; background-size: 1.2em; }
+select optgroup { background: #161b22; color: var(--gold); font-weight: bold; font-style: normal; }
+select option { background: #0d1117; color: var(--txt); padding: 5px; }
+
+.slider-container { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 10px; }
+input[type="range"] {
+flex: 1; height: 6px; -webkit-appearance: none;
+background: rgba(255,255,255,0.15); border-radius: 10px; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+-webkit-appearance: none; appearance: none; width: 22px; height: 22px;
+background: #ffffff; border: 3px solid var(--blue); border-radius: 50%;
+cursor: pointer; box-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+transition: all 0.2s ease; margin-top: -8px;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.val-display { width: 40px; text-align: right; font-size: 0.9rem; font-weight: bold; font-family: monospace; color: white; }
+
+#chat-window {
+background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+border-radius: 24px; height: 500px; overflow-y: auto; padding: 30px;
+display: flex; flex-direction: column; gap: 25px; scroll-behavior: smooth;
+}
+.bubble { max-width: 85%; padding: 18px 24px; border-radius: 20px; animation: fadeIn 0.3s ease-out; position: relative; box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+.dudeA { align-self: flex-start; background: linear-gradient(145deg, #2a261e, #1a1814); border-left: 4px solid var(--gold); margin-right: 15%; }
+.dudeB { align-self: flex-end; background: linear-gradient(145deg, #16202e, #0e141d); border-right: 4px solid var(--blue); margin-left: 15%; }
+.dudeC { align-self: center; background: linear-gradient(145deg, #2e1616, #0f0f0f); border-bottom: 4px solid var(--red); max-width: 90%; }
+.highlighted { border: 2px solid white !important; box-shadow: 0 0 15px rgba(255,255,255,0.5); }
+
+.role-tag { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; display: block; letter-spacing: 1px; }
+.dudeA .role-tag { color: var(--gold); }
+.dudeB .role-tag { color: var(--blue); text-align: right; }
+.dudeC .role-tag { color: var(--red); text-align: center; }
+
+.markdown-body { font-size: 1.05rem; line-height: 1.6; color: #e6edf3; }
+.markdown-body p { margin-bottom: 0.8em; }
+.markdown-body strong { color: #fff; font-weight: 700; }
+.markdown-body code { background: rgba(255,255,255,0.1); padding: 3px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #ffab70; }
+.markdown-body pre { background: #0d1117; padding: 15px; border-radius: 10px; overflow-x: auto; border: 1px solid var(--border); margin: 15px 0; }
+.meta-info { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 12px; font-size: 0.75rem; color: var(--txt2); opacity: 0.7; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
+
+.controls-bar { display: flex; gap: 15px; margin-top: 25px; }
+button {
+flex: 1; padding: 16px; border: none; border-radius: 14px; font-weight: 700;
+font-size: 1rem; cursor: pointer; transition: all 0.2s;
+color: white; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+button:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 6px 12px rgba(0,0,0,0.3); }
+button:active { transform: scale(0.98); }
+.btn-topic { background: rgba(56,139,253,0.15); color: var(--blue); border-color: rgba(56,139,253,0.3); }
+.btn-start { background: linear-gradient(135deg, #238636, #1a6328); }
+.btn-stop { background: linear-gradient(135deg, #da3633, #a82a27); display: none; }
+.btn-func { background: #1f6feb; font-size: 0.85rem; padding: 10px 20px; flex: unset; min-width: 100px; }
+.btn-danger { background: #d03030; font-size: 0.85rem; padding: 10px 20px; flex: unset; }
+.btn-pitch { background: linear-gradient(135deg, #9b59b6, #8e44ad); font-size: 0.85rem; padding: 15px 15px; flex: unset; }
+.btn-clipboard { background: linear-gradient(135deg, #e67e22, #d35400); font-size: 0.85rem; padding: 15px 15px; flex: unset; }
+.btn-api { background: linear-gradient(135deg, var(--gold), #b8860b); color: black; font-size: 0.85rem; padding: 10px 20px; flex: unset; }
+
+.file-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; }
+.stat-badge { background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-family: monospace; border: 1px solid rgba(255,255,255,0.1); }
+.timing-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; align-items: end; margin-bottom: 20px; }
+.config-select { width:auto; flex:unset; font-size:0.9rem; padding: 8px 12px; }
+
+.loading-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 999; flex-direction: column; gap: 20px; }
+.spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.1); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.style-selector-row {
+display: grid;
+grid-template-columns: 1fr 1fr 1fr;
+gap: 15px;
+margin: 20px 0;
+padding: 15px 0;
+border-top: 1px solid var(--border);
+border-bottom: 1px solid var(--border);
+}
+
+/* --- JOYPAD LAYERS & NOTIFICATION STYLES --- */
+#notificationBubble {
+position: fixed; top: 20px; right: 20px;
+background: linear-gradient(135deg, var(--blue), #3b82f6);
+color: white; padding: 15px 25px; border-radius: 50px;
+font-family: 'Segoe UI', sans-serif; font-weight: bold; font-size: 1rem;
+box-shadow: 0 10px 25px rgba(59, 130, 246, 0.5);
+z-index: 10000; opacity: 0; transform: translateY(-20px) scale(0.9);
+transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+display: flex; align-items: center; gap: 10px; pointer-events: none;
+}
+#notificationBubble.bubble-visible { opacity: 1; transform: translateY(0) scale(1); }
+#bubbleLayer {
+background: white; color: var(--blue);
+width: 24px; height: 24px; border-radius: 50%;
+display: flex; align-items: center; justify-content: center;
+font-size: 0.9rem; font-weight: 900;
+}
+
+.menu-popup {
+position: fixed;
+top: 50%; left: 50%; transform: translate(-50%, -50%);
+background: var(--card);
+border: 2px solid var(--accent);
+border-radius: 15px;
+padding: 25px;
+z-index: 20000;
+display: none;
+box-shadow: 0 0 50px rgba(0, 255, 157, 0.4);
+min-width: 600px;
+width: 65%;
+color: white;
+max-height: 90vh;
+overflow-y: auto;
+}
+.menu-popup.visible { display: block; animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes popIn { from { transform: translate(-50%, -50%) scale(0.9); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+
+.menu-title {
+color: var(--accent); font-size: 1.4rem; margin-bottom: 20px;
+text-align: center; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;
+}
+.menu-item {
+padding: 12px 15px; margin: 6px 0;
+background: rgba(255,255,255,0.05);
+border-radius: 10px;
+display: flex; justify-content: space-between; align-items: center;
+border: 2px solid transparent; transition: all 0.1s;
+flex-wrap: wrap; 
+}
+.menu-item.selected {
+background: rgba(0, 255, 157, 0.1);
+border-color: var(--accent);
+transform: translateX(5px);
+}
+.menu-item .label { color: #aaa; font-weight: 600; font-size: 1rem; }
+.menu-item .value { color: white; font-weight: 800; font-size: 1.1rem; }
+.menu-item .hint { color: #666; font-size: 0.7rem; margin-left: 10px; font-style: italic;}
+
+.menu-textarea-container {
+margin-top: 10px; padding: 10px; border: 2px solid transparent; border-radius: 10px;
+}
+.menu-textarea-container.selected {
+border-color: var(--accent);
+background: rgba(0, 255, 157, 0.05);
+}
+.menu-input-field {
+width: 100%;
+background: #0d1117; color: #e6edf3;
+border: 1px solid var(--border); border-radius: 8px;
+padding: 10px; margin-top: 5px;
+font-family: monospace; font-size: 0.9rem;
+resize: vertical;
+min-height: 60px;
+}
+#global-rules { height: 80px; }
+.menu-number-input {
+    width: 80px;
+    background: #000;
+    border: 1px solid var(--border);
+    color: white;
+    padding: 5px;
+    border-radius: 5px;
+    text-align: right;
+    font-weight: bold;
+}
+.menu-footer { margin-top: 20px; text-align: center; color: #666; font-size: 0.85rem; border-top: 1px solid #333; padding-top: 10px; }
+
+@media (max-width: 900px) {
+.engine-grid { grid-template-columns: 1fr; }
+.container { padding: 15px; margin-top: 0; border-radius: 0; border: none; }
+.timing-row { grid-template-columns: 1fr 1fr; }
+.style-selector-row { grid-template-columns: 1fr; }
+.menu-popup { width: 95%; min-width: auto; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- API KEY POPUP -->
+<div id="apiKeyPopup" class="menu-popup" style="min-width: 450px; width: auto;">
+    <div class="menu-title">🔑 API Kulcsok</div>
+    <div style="padding: 0 10px;">
+        <div class="control-row">
+            <label>Groq API Key (gsk_...)</label>
+            <input type="password" id="input-groq-key" placeholder="Illeszd be a Groq kulcsodat...">
+        </div>
+        <div class="control-row" style="margin-top:15px;">
+            <label>Translator Email (MyMemory API)</label>
+            <input type="text" id="input-trans-email" placeholder="email@cimed.com (Opcionális)">
+        </div>
+        <div style="margin-top: 20px; text-align: right;">
+            <button class="btn-start" onclick="saveApiKeysAndClose()">💾 Mentés & Bezárás</button>
+        </div>
+        <div style="margin-top: 15px; font-size: 0.8rem; color: #666; text-align: center;">
+            A kulcsok a böngésződben (localStorage) tárolódnak.
+        </div>
+    </div>
+</div>
+
+<!-- MENU POPUP (Rejtve) -->
+<div id="menuPopup" class="menu-popup">
+<div class="menu-title">⚙️ AI Vezérlőpult</div>
+
+<!-- 0. Karakter Kiválasztása -->
+<div class="menu-item" id="menu-row-0">
+    <span class="label">Kiválasztott Karakter</span>
+    <span class="value" id="menu-char-val">a</span>
+</div>
+
+<!-- 1. Szolgáltató -->
+<div class="menu-item" id="menu-row-1">
+    <span class="label">Szolgáltató</span>
+    <span class="value" id="menu-prov-val">Groq</span>
+</div>
+
+<!-- 2. Modell -->
+<div class="menu-item" id="menu-row-2">
+    <span class="label">Modell</span>
+    <span class="value" id="menu-model-val">llama3-70b-8192</span>
+</div>
+
+<!-- 3. Stílus (Preset) -->
+<div class="menu-item" id="menu-row-3">
+    <span class="label">Stílus (Preset)</span>
+    <span class="value" id="menu-style-val">Barátságos</span>
+</div>
+
+<!-- 4. Személyiség (Input/Textarea) -->
+<div class="menu-textarea-container" id="menu-row-4">
+    <div style="display:flex; justify-content:space-between;">
+        <span class="label" style="color:#aaa; font-weight:600; font-size:0.9rem;">🎭 Személyiség / Prompt (PTT)</span>
+        <span style="font-size:0.75rem; color:var(--accent);">8: PTT/Stop | 8+1: Törlés+Olvasás</span>
+    </div>
+    <textarea id="menu-pers-val" class="menu-input-field" placeholder="Írd be vagy diktáld be a stílust..."></textarea>
+</div>
+
+<!-- 5. Hőmérséklet -->
+<div class="menu-item" id="menu-row-5">
+    <span class="label">Hőmérséklet</span>
+    <span class="value" id="menu-temp-val">0.9</span>
+</div>
+
+<!-- 6. Random Pitch -->
+<div class="menu-item" id="menu-row-6">
+    <span class="label">Hangmagasság (Pitch)</span>
+    <span class="value" id="menu-pitch-val">A:0.9 B:0.9 C:0.9</span>
+</div>
+
+<!-- 7. Hangsebesség (Rate) -->
+<div class="menu-item" id="menu-row-7">
+    <span class="label">Hangsebesség (Rate)</span>
+    <span class="value" id="menu-rate-val">A:0.9 B:0.9 C:0.9</span>
+</div>
+
+<!-- 8. Globális Szabályok -->
+<div class="menu-textarea-container" id="menu-row-8">
+    <div style="display:flex; justify-content:space-between;">
+        <span class="label" style="color:#aaa; font-weight:600; font-size:0.9rem;">📝 Globális Szabályok (PTT)</span>
+        <span style="font-size:0.75rem; color:var(--accent);">8: PTT/Stop | 8+1: Törlés+Olvasás</span>
+    </div>
+    <textarea id="global-rules" class="menu-input-field" placeholder="Ide írt szabályok bekerülnek minden rendszerüzenetbe..."></textarea>
+</div>
+
+<!-- 9. Memória kontextus mérete -->
+<div class="menu-item" id="menu-row-9">
+    <span class="label">Memória kontextus mérete</span>
+    <span class="value" id="menu-context-val">8</span>
+</div>
+
+<!-- 10. Flow Szövegméret -->
+<div class="menu-item" id="menu-row-10">
+    <div style="display:flex; flex-direction:column; align-items:flex-start; gap:2px;">
+        <div style="display:flex; align-items:center; gap:10px; width:100%;">
+            <span class="label" style="flex:1;">Flow Szövegméret (Chunk)</span>
+            <input type="number" id="menu-flowsize-input" class="menu-number-input" value="1500" min="100" step="100">
+        </div>
+        <span class="hint">Default: 1500 (karakter)</span>
+    </div>
+</div>
+
+<div class="menu-footer">
+    Nyilak: Navigáció/Váltás | 4: Kilépés | 1+5: Menü
+</div>
+</div>
+
+<div class="container">
+<h2>a & b <span style="font-size:0.6em; opacity:0.8;">(& c)</span> <span style="font-size:0.4em; opacity:0.6; vertical-align:middle; letter-spacing: 2px;">// HYBRID RAG ENGINE v9.9 (Auto-Input)</span></h2>
+
+<!-- FELSŐ SZEKCIÓ: ENGINE CONFIG -->
+<div class="config-section">
+    <h3>
+        <span>⚙️ AI Motorok & Beállítások</span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span class="stat-badge" id="model-status">Kapcsolódás...</span>
+          <button class="btn-api" onclick="toggleApiKeyPopup()" title="Groq és Fordítási Kulcsok beállítása">🔑 API Kulcsok</button>
+          <button class="btn-func" onclick="refreshModelsManually()" style="padding: 5px 15px; font-size:0.8rem; background: rgba(31, 111, 235, 0.15); border: 1px solid rgba(31, 111, 235, 0.4); backdrop-filter: blur(10px); color: rgba(255, 255, 255, 0.4);">
+🔄 Modell lista frissítése
+</button>
+        </div>
+    </h3>
+
+<div class="engine-grid">
+        <!-- DUDE A -->
+        <div class="engine-card engine-a">
+            <div class="engine-header a">
+                <input type="text" id="dudeA-name" class="name-input a" value="Pisti" placeholder="Név...">
+                <span id="dudeA-temp-val" class="val-display">0.9</span>
+            </div>
+            <div class="control-row">
+                <label>Szolgáltató</label>
+                <select id="dudeA-provider" onchange="updateModelUI('dudeA')">
+                    <option value="groq">Groq LPU</option>
+                    <option value="puter">Puter.js Cloud</option>
+                </select>
+            </div>
+            <div class="control-row">
+                <label>Modell Szűrő</label>
+                <input type="text" id="dudeA-filter" placeholder="Keresés..." oninput="filterModels('dudeA')">
+            </div>
+            <div class="control-row">
+                <label>Kiválasztott Modell</label>
+                <select id="dudeA-model" onchange="saveSettings()"></select>
+            </div>
+            <div class="control-row">
+                <label>Hőmérséklet & Stílus</label>
+                <div class="slider-container">
+                    <input type="range" id="dudeA-temp" min="0" max="2" step="0.1" value="0.9" oninput="updateSliders()">
+                </div>
+                <input type="text" id="dudeA-style" value="Barátságos és nyitott" placeholder="Személyiség...">
+            </div>
+        </div>
+
+        <!-- DUDE B -->
+        <div class="engine-card engine-b">
+            <div class="engine-header b">
+                <input type="text" id="dudeB-name" class="name-input b" value="Brave" placeholder="Név...">
+                <span id="dudeB-temp-val" class="val-display">0.9</span>
+            </div>
+            <div class="control-row">
+                <label>Szolgáltató</label>
+                <select id="dudeB-provider" onchange="updateModelUI('dudeB')">
+                    <option value="groq">Groq LPU</option>
+                    <option value="puter">Puter.js Cloud</option>
+                </select>
+            </div>
+            <div class="control-row">
+                <label>Modell Szűrő</label>
+                <input type="text" id="dudeB-filter" placeholder="Keresés..." oninput="filterModels('dudeB')">
+            </div>
+            <div class="control-row">
+                <label>Kiválasztott Modell</label>
+                <select id="dudeB-model" onchange="saveSettings()"></select>
+            </div>
+            <div class="control-row">
+                <label>Hőmérséklet & Stílus</label>
+                <div class="slider-container">
+                    <input type="range" id="dudeB-temp" min="0" max="2" step="0.1" value="0.9" oninput="updateSliders()">
+                </div>
+                <input type="text" id="dudeB-style" value="Közvetlen és érdeklődő" placeholder="Személyiség...">
+            </div>
+        </div>
+
+        <!-- DUDE C -->
+        <div class="engine-card engine-c" id="card-c">
+            <div class="engine-header c">
+                <div style="display:flex; align-items:center;">
+                    <input type="text" id="dudeC-name" class="name-input c" value="Tsunami" placeholder="Név...">
+                    <label class="switch" title="Szereplő ki/be kapcsolása">
+                        <input type="checkbox" id="dudeC-active" checked onchange="toggleDudeC()">
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+                <span id="dudeC-temp-val" class="val-display">0.9</span>
+            </div>
+
+            <div class="control-row">
+                <label>Szolgáltató</label>
+                <select id="dudeC-provider" onchange="updateModelUI('dudeC')">
+                    <option value="groq">Groq LPU</option>
+                    <option value="puter">Puter.js Cloud</option>
+                </select>
+            </div>
+
+            <div class="control-row">
+                <label>Modell Szűrő</label>
+                <input type="text" id="dudeC-filter" placeholder="Keresés..." oninput="filterModels('dudeC')">
+            </div>
+
+            <div class="control-row">
+                <label>Kiválasztott Modell</label>
+                <select id="dudeC-model" onchange="saveSettings()"></select>
+            </div>
+
+            <div class="control-row">
+                <label>Hőmérséklet & Stílus</label>
+                <div class="slider-container">
+                    <input type="range" id="dudeC-temp" min="0" max="2" step="0.1" value="0.9" oninput="updateSliders()">
+                </div>
+                <input type="text" id="dudeC-style" value="Kritikus és elemző" placeholder="Személyiség...">
+            </div>
+        </div>
+    </div>
+
+    <!-- STÍLUSVÁLASZTÓ LEGÖRDÜLŐK -->
+    <div class="style-selector-row">
+        <div class="control-row">
+            <label>🎭 'a' karakter stílusa</label>
+            <select id="select-A" class="config-select" onchange="applyStyle('A')" style="width: 100%;">
+                <option value="default">-- Válassz karaktert --</option>
+            </select>
+            <button class="btn-pitch" onclick="randomizeCharacter('A')" style="margin-top: 5px; font-size: 0.8rem; padding: 8px 12px;">🎲 Random A</button>
+        </div>
+        <div class="control-row">
+            <label>📚 'b' karakter stílusa</label>
+            <select id="select-B" class="config-select" onchange="applyStyle('B')" style="width: 100%;">
+                <option value="default">-- Válassz karaktert --</option>
+            </select>
+            <button class="btn-pitch" onclick="randomizeCharacter('B')" style="margin-top: 5px; font-size: 0.8rem; padding: 8px 12px;">🎲 Random B</button>
+        </div>
+        <div class="control-row">
+            <label>🎪 'c' karakter stílusa</label>
+            <select id="select-C" class="config-select" onchange="applyStyle('C')" style="width: 100%;">
+                <option value="default">-- Válassz karaktert --</option>
+            </select>
+            <button class="btn-pitch" onclick="randomizeCharacter('C')" style="margin-top: 5px; font-size: 0.8rem; padding: 8px 12px;">🎲 Random C</button>
+        </div>
+    </div>
+</div>
+
+<!-- ALSÓ SZEKCIÓ: CHAT & VEZÉRLÉS -->
+<div class="config-section" style="border-top: 2px solid var(--accent);">
+    <!-- Hang és Időzítés Vezérlők -->
+    <div class="timing-row">
+        <div class="control-row">
+            <label>TTS Sebesség (<span id="speed-val">1.0x</span>)</label>
+            <div class="slider-container" style="background:transparent; padding:0;">
+                <input type="range" id="speech-rate" min="0.5" max="2.0" step="0.1" value="1.0" oninput="updateSliders()">
+            </div>
+        </div>
+        <div class="control-row">
+            <label>Max. Mondat Szünet (ms)</label>
+            <input type="number" id="max-sentence-pause" value="500" min="0" max="3000" step="50" style="padding:8px;" onchange="saveSettings()">
+        </div>
+        <div class="control-row">
+            <label>Max. Válasz Szünet (ms)</label>
+            <input type="number" id="max-turn-pause" value="2000" min="0" max="10000" step="100" style="padding:8px;" onchange="saveSettings()">
+        </div>
+
+        <!-- Hangmagasság (Pitch) csúszkák -->
+        <div class="control-row">
+            <label>Hangmagasság (Pitch) – A</label>
+            <div class="slider-container">
+                <input type="range" id="pitch-A" min="0.5" max="2.0" step="0.1" value="0.9" oninput="updatePitch('A')">
+                <span id="pitch-A-val" class="val-display">0.9</span>
+            </div>
+        </div>
+        <div class="control-row">
+            <label>Hangmagasság (Pitch) – B</label>
+            <div class="slider-container">
+                <input type="range" id="pitch-B" min="0.5" max="2.0" step="0.1" value="0.9" oninput="updatePitch('B')">
+                <span id="pitch-B-val" class="val-display">0.9</span>
+            </div>
+        </div>
+        <div class="control-row">
+            <label>Hangmagasság (Pitch) – C</label>
+            <div class="slider-container">
+                <input type="range" id="pitch-C" min="0.5" max="2.0" step="0.1" value="0.9" oninput="updatePitch('C')">
+                <span id="pitch-C-val" class="val-display">0.9</span>
+            </div>
+        </div>
+
+        <div class="control-row">
+            <label>Hangsebesség (Rate)</label>
+            <button class="btn-pitch" onclick="/*placeholder*/">🎲 Random Hangsebesség</button>
+        </div>
+    </div>
+
+    <!-- FlowBookReader Szekció -->
+    <div class="config-section" style="border-top: 2px solid var(--accent);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; border:none;">📖 FlowBookReader Mód</h3>
+            <label class="switch">
+                <input type="checkbox" id="flow-mode-active" onchange="toggleFlowMode()">
+                <span class="slider-round"></span>
+            </label>
+        </div>
+        
+        <div class="timing-row" id="flow-controls" style="opacity:0.5; pointer-events:none;">
+            <div class="control-row">
+                <label>Olvasási pozíció: <span id="flow-percent-label">0</span>%</label>
+                <div class="slider-container">
+                    <input type="range" id="flow-position" min="0" max="100" step="0.1" value="0" oninput="updateFlowPosition()">
+                </div>
+            </div>
+            <div class="control-row">
+                <label>Aktuális fejezet</label>
+                <div id="current-chapter-display" class="stat-badge" style="width:100%; text-align:center;">-</div>
+            </div>
+            <div class="control-row">
+                <label>Műveletek</label>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn-func" onclick="saveBookmark()" style="background:var(--gold); color:black;">🔖 Mentés</button>
+                    <button class="btn-func" onclick="loadBookmark()">📂 Betöltés</button>
+                </div>
+            </div>
+
+            <div class="control-row">
+                <label>Ismétlés esélye: <span id="repeat-chance-label">20</span>%</label>
+                <input type="range" id="flow-repeat-chance" min="0" max="100" value="20" oninput="updateFlowSettings()">
+            </div>
+
+            <div class="control-row">
+                <label>Visszaugrás mértéke: <span id="repeat-dist-label">2</span> oldal</label>
+                <input type="range" id="flow-repeat-distance" min="1" max="10" value="2" oninput="updateFlowSettings()">
+            </div>
+        </div>
+
+        <!-- ÚJ FUNKCIÓ: Auto Input Checkbox -->
+        <div class="control-row" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.9rem; color: var(--txt);">
+                <input type="checkbox" id="flow-auto-input" style="width: auto; margin-right: 10px;" onchange="toggleFlowAutoInput()">
+                📄 Szöveg beküldése a Témába (Auto-Input)
+            </label>
+            <span style="font-size: 0.75rem; color: var(--txt2); margin-top: 5px;">
+                Ha bepipálod, a könyv/részlet automatikusan bekerül a 'Téma javaslat' mezőbe minden körben.
+            </span>
+        </div>
+    </div>
+
+    <div class="file-row">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <button class="btn-func" onclick="saveConversationToJSON()">💾 Mentés (JSON)</button>
+            <button class="btn-func" onclick="document.getElementById('fileInput').click()">📂 Betöltés (JSON)</button>
+            <input type="file" id="fileInput" style="display:none" accept=".json" multiple onchange="loadConversationFromJSON(event)">
+            
+            <button class="btn-pitch" onclick="document.getElementById('libInput').click()">📚 Könyvtár betöltése</button>
+            <!-- JAVÍTÁS: .txt és .srt is engedélyezve -->
+            <input type="file" id="libInput" style="display:none" accept=".txt, .srt, text/*" multiple onchange="loadLibrary(event)">
+            
+            <button class="btn-clipboard" onclick="loadFromClipboard()" title="Szöveg beillesztése a vágólapról (RAG/Flow)">📋 Paste (Vágólap)</button>
+            
+            <button class="btn-danger" onclick="clearLibraries()" style="background: #d03030; font-size:0.85rem; padding: 10px 20px; flex: unset;">🗑️ Könyvtár ürítése</button>
+
+            <select id="libLanguage" class="config-select">
+                <option value="hu">Magyar könyv</option>
+                <option value="en">Angol könyv</option>
+                <option value="fr">Francia könyv</option>
+                <option value="de">Német könyv</option>
+                <option value="es">Spanyol könyv</option>
+            </select>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+             <div id="lib-status" class="stat-badge" style="display:none; color:var(--blue); border-color:var(--blue);">📖 Nincs könyv betöltve</div>
+             <div class="stat-badge">
+                Üzenetek: <span id="msg-count" style="color:var(--gold)">0</span>
+            </div>
+        </div>
+        <button class="btn-danger" onclick="freshStart()">🗑️ Újrakezdés (9)</button>
+    </div>
+
+    <input type="text" id="current-topic" placeholder="💬 Téma javaslat (8: PTT)..." style="margin-bottom: 20px; padding: 18px; font-size:1.1rem; border-color:var(--blue);">
+
+    <div id="chat-window">
+        <div style="text-align:center; color:var(--txt2); margin-top:200px; font-style:italic; font-size:1.1rem;">
+            "Válassz modellt fentről, majd indítsd el a beszélgetést..."
+        </div>
+    </div>
+
+    <div class="controls-bar">
+        <button class="btn-topic" onclick="getNewTopic()">🎲 Téma ötlet</button>
+        <button class="btn-start" id="startBtn" onclick="startEngine()">▶️ START</button>
+        <button class="btn-stop" id="stopBtn" onclick="stopEngine()">⏹️ STOP</button>
+    </div>
+</div>
+</div>
+
+<div class="loading-overlay" id="loading">
+<div class="spinner"></div>
+<div id="loading-text" style="color:white; font-size:1.2rem;">Dolgozom...</div>
+</div>
+
+<!-- Notification Bubble -->
+<div id="notificationBubble">
+<div id="bubbleLayer">1</div>
+<span id="bubbleText">Első funkció</span>
+</div>
+
+<script>
+// ========== ÁLLAPOT & KONFIGURÁCIÓ ========== 
+let API_KEY_GROQ = "";
+let TRANSLATOR_EMAIL = "";
+let isRunning = false;
+let history = [];
+let conversationHistory = [];
+let teacherLibraries = []; 
+let globalRules = "";
+let cachedGroqModels = [];
+let cachedPuterModels = [];
+let pitchValues = { dudeA: 0.9, dudeB: 0.9, dudeC: 0.9 };
+let rateValues = { dudeA: 1.0, dudeB: 1.0, dudeC: 1.0 };
+let groqCacheInfo = { source: 'none', time: null, count: 0 };
+let puterCacheInfo = { source: 'none', time: null, count: 0 };
+let speechToken = 0; 
+
+let whisper = null;
+let wordTranslator = null;
+
+/* Memória kontextus mérete */
+let contextSize = 8; 
+
+// FlowBookReader Állapot
+let flowState = {
+    active: false,
+    currentIndex: 0,
+    bookmark: 0,
+    chunkSize: 1500,
+    lastChapter: "Kezdet",
+    repeatChance: 0.2,
+    repeatDistance: 3000,
+    autoInput: false // ÚJ BEÁLLÍTÁS: Auto-Input toggle
+};
+
+const STORAGE_KEYS = {
+    CONVERSATION: 'abc_chat_history_v6_robust',
+    SETTINGS: 'abc_settings_v6_robust',
+    API_CREDENTIALS: 'abc_api_credentials_v1',
+    GROQ_MODELS: 'groq_models_cache_v2',
+    GROQ_TIME: 'groq_models_time_v2',
+    PUTER_MODELS: 'puter_models_cache_v2',
+    PUTER_TIME: 'puter_models_time_v2',
+    INPUT_HISTORY: 'input_history_v2',
+    FLOW_BOOKMARK: 'abc_flow_bookmark' 
+};
+
+// ========== JOYPAD & GLOBAL VARIÁBLOK ========== 
+let currentLayer = 1;
+let currentReviewIndex = -1;
+const layerNames = { 1: "layer1", 2: "layer2", 3: "layer3" };
+let isMenuActive = false;
+let menuRowIndex = 0;
+let selectedCharIndex = 0;
+const chars = ['A', 'B', 'C'];
+let keysPressed = {};
+
+// ========== SRT FELDOLGOZÓ FÜGGVÉNY (ÚJ) ========== 
+function processSRT(text) {
+    if (text.includes(' --> ') || text.includes('-->')) {
+        let isSrt = 1;
+        console.log('This appears to be an SRT file. Timecode separators -->');
+        
+        // Mivel a startTypingAnimation nem létezik a DOM-ban, 
+        // a meglévő értesítési rendszert használjuk helyette.
+        showNotification('🎬 SRT fájl felismerve! Konvertálás...');
+
+        // Vágólap törlése
+        navigator.clipboard.writeText('');  
+        
+        // SRT konvertálás
+        const srtText = text;
+        const lines = srtText.split('\n');
+        let result = '';
+        for (const line of lines) {
+            if (!line.match(/^\d+$/) && !line.includes('-->')) {
+                result += line + '\n';
+            }
+        }
+        const finalResult = result.trim();
+        text = finalResult;
+        
+        // Pontok hozzáadása, ha kevés van
+        let words = finalResult.split(' ');
+        let pointCount = 0;
+        for (let i = 0; i < words.length; i++) {
+            if (words[i].includes('.')) {
+                pointCount++;
+            }
+        }
+        if (pointCount < 3) {
+            for (let i = 0; i < words.length; i++) {
+                if (i % 15 === 0) {
+                    words[i] += '.';
+                }
+            }
+        }
+        text = words.join(' ');
+        
+        console.log("SRT Conversion done.");
+    }
+    return text;
+}
+
+// ========== FELHÁRMA ZÁRÓK ========== 
+function speakText(text) {
+    speechToken++; 
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'hu-HU';
+    u.rate = 1.0;
+    window.speechSynthesis.speak(u);
+}
+
+// ========== API KEY KEZELÉS ==========
+function loadApiKeys() {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS.API_CREDENTIALS) || '{}');
+    if (saved.groq) API_KEY_GROQ = saved.groq;
+    if (saved.email) TRANSLATOR_EMAIL = saved.email;
+
+    // Frissítjük a UI inputokat
+    document.getElementById('input-groq-key').value = API_KEY_GROQ;
+    document.getElementById('input-trans-email').value = TRANSLATOR_EMAIL;
+    
+    if(!API_KEY_GROQ) {
+        showNotification("⚠️ Hiányzik a Groq API Key!");
+    }
+}
+
+function toggleApiKeyPopup() {
+    const popup = document.getElementById('apiKeyPopup');
+    if (popup.classList.contains('visible')) {
+        popup.classList.remove('visible');
+    } else {
+        // Frissítjük az értékeket megnyitás előtt
+        document.getElementById('input-groq-key').value = API_KEY_GROQ;
+        document.getElementById('input-trans-email').value = TRANSLATOR_EMAIL;
+        popup.classList.add('visible');
+    }
+}
+
+function saveApiKeysAndClose() {
+    const gKey = document.getElementById('input-groq-key').value.trim();
+    const tEmail = document.getElementById('input-trans-email').value.trim();
+
+    API_KEY_GROQ = gKey;
+    TRANSLATOR_EMAIL = tEmail;
+
+    const data = {
+        groq: gKey,
+        email: tEmail
+    };
+
+    localStorage.setItem(STORAGE_KEYS.API_CREDENTIALS, JSON.stringify(data));
+    document.getElementById('apiKeyPopup').classList.remove('visible');
+    
+    showNotification("🔑 API Kulcsok elmentve!");
+    
+    // Ha nincs kulcs, warning
+    if(!gKey) showNotification("⚠️ Nincs Groq Key beállítva!");
+    else {
+        // Ha van kulcs és még nem frissítettük a modelleket, tegyük meg
+        refreshModelsManually(true); // true = silent
+    }
+}
+
+// ========== MODELLEK CACHE & FRISSÍTÉS ========== 
+async function fetchGroqModels() {
+    if (!API_KEY_GROQ) {
+        groqCacheInfo = { source: 'error', time: null, count: 0 };
+        updateStatus("❌ Nincs Groq API Key");
+        return;
+    }
+
+    const cached = localStorage.getItem(STORAGE_KEYS.GROQ_MODELS);
+    const cacheTime = localStorage.getItem(STORAGE_KEYS.GROQ_TIME);
+    const now = Date.now();
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < 604800000) {
+        try {
+            cachedGroqModels = JSON.parse(cached);
+            groqCacheInfo = {
+                source: 'cache',
+                time: new Date(parseInt(cacheTime)).toLocaleString('hu-HU'),
+                count: cachedGroqModels.length
+            };
+            updateStatus(`✅ Groq: ${cachedGroqModels.length} modell (cache)`);
+            return;
+        } catch (e) {
+            console.warn("Cache hiba, újratöltés...");
+        }
+    }
+    try {
+        updateStatus("Groq modellek letöltése...");
+        const response = await fetch("https://api.groq.com/openai/v1/models", {
+            headers: { "Authorization": `Bearer ${API_KEY_GROQ}` }
+        });
+        const data = await response.json();
+        if (data.data) {
+            cachedGroqModels = data.data.map(m => m.id).sort();
+            localStorage.setItem(STORAGE_KEYS.GROQ_MODELS, JSON.stringify(cachedGroqModels));
+            localStorage.setItem(STORAGE_KEYS.GROQ_TIME, now.toString());
+            groqCacheInfo = {
+                source: 'live',
+                time: new Date(now).toLocaleString('hu-HU'),
+                count: cachedGroqModels.length
+            };
+            updateStatus(`✅ Groq: ${cachedGroqModels.length} modell (friss)`);
+        } else if (data.error) {
+            throw new Error(data.error.message);
+        }
+    } catch (e) {
+        console.error("Groq Fetch Error:", e);
+        groqCacheInfo = { source: 'error', time: null, count: 0 };
+        updateStatus("❌ Groq hiba: " + (e.message || "Ismeretlen"));
+    }
+}
+
+async function fetchPuterModels() {
+    const cached = localStorage.getItem(STORAGE_KEYS.PUTER_MODELS);
+    const cacheTime = localStorage.getItem(STORAGE_KEYS.PUTER_TIME);
+    const now = Date.now();
+    if (cached && cacheTime && (now - parseInt(cacheTime)) < 604800000) {
+        try {
+            cachedPuterModels = JSON.parse(cached);
+            puterCacheInfo = {
+                source: 'cache',
+                time: new Date(parseInt(cacheTime)).toLocaleString('hu-HU'),
+                count: cachedPuterModels.length
+            };
+            updateStatus(`✅ Puter: ${cachedPuterModels.length} modell (cache)`);
+            return;
+        } catch (e) {
+            console.warn("Cache hiba, újratöltés...");
+        }
+    }
+    try {
+        updateStatus("Puter modellek letöltése...");
+        const models = await puter.ai.listModels();
+        cachedPuterModels = models.map(m => m.id || m).sort();
+        localStorage.setItem(STORAGE_KEYS.PUTER_MODELS, JSON.stringify(cachedPuterModels));
+        localStorage.setItem(STORAGE_KEYS.PUTER_TIME, now.toString());
+        puterCacheInfo = {
+            source: 'live',
+            time: new Date(now).toLocaleString('hu-HU'),
+            count: cachedPuterModels.length
+        };
+        updateStatus(`✅ Puter: ${cachedPuterModels.length} modell (friss)`);
+    } catch (e) {
+        console.error("Puter Fetch Error:", e);
+        if (cached) {
+            try {
+                cachedPuterModels = JSON.parse(cached);
+                puterCacheInfo = {
+                    source: 'old_cache',
+                    time: new Date(parseInt(cacheTime)).toLocaleString('hu-HU'),
+                    count: cachedPuterModels.length
+                };
+                updateStatus(`⚠️ Puter: ${cachedPuterModels.length} modell (régi cache)`);
+            } catch (cacheError) {
+                cachedPuterModels = [];
+                puterCacheInfo = { source: 'error', time: null, count: 0 };
+                updateStatus("❌ Puter modellek nem elérhetők");
+            }
+        } else {
+            cachedPuterModels = [];
+            puterCacheInfo = { source: 'error', time: null, count: 0 };
+            updateStatus("❌ Puter modellek nem elérhetők");
+        }
+    }
+}
+
+async function refreshModelsManually(silent = false) {
+    if (!API_KEY_GROQ && !silent) {
+        alert("Nincs megadva Groq API Key! Kérlek add meg a 🔑 API Kulcsok menüben.");
+        toggleApiKeyPopup();
+        return;
+    }
+
+    if (!silent && !confirm("Modell lista frissítése? Ez élőben letölti az aktuális modelleket.")) {
+        return;
+    }
+
+    updateStatus("Modellek frissítése...");
+    localStorage.removeItem(STORAGE_KEYS.GROQ_MODELS);
+    localStorage.removeItem(STORAGE_KEYS.GROQ_TIME);
+    localStorage.removeItem(STORAGE_KEYS.PUTER_MODELS);
+    localStorage.removeItem(STORAGE_KEYS.PUTER_TIME);
+    await Promise.allSettled([fetchGroqModels(), fetchPuterModels()]);
+    ['dudeA', 'dudeB', 'dudeC'].forEach(id => updateModelUI(id));
+    updateStatus("✅ Modell lista frissítve");
+    if(!silent) alert(`Modell lista frissítve!\nGroq: ${cachedGroqModels.length} db\nPuter: ${cachedPuterModels.length} db`);
+}
+
+// ========== UI LOGIKA ========== 
+function updateModelUI(dudeId, forceValue = null) {
+    const provider = document.getElementById(`${dudeId}-provider`).value;
+    const filterTxt = document.getElementById(`${dudeId}-filter`).value.toLowerCase();
+    const select = document.getElementById(`${dudeId}-model`);
+    const currentVal = forceValue || select.value;
+    const sourceList = provider === 'groq' ? cachedGroqModels : cachedPuterModels;
+    const filtered = sourceList.filter(id => id.toLowerCase().includes(filterTxt));
+
+    select.innerHTML = "";
+    filtered.forEach(modelId => {
+        const opt = document.createElement('option');
+        opt.value = modelId;
+        opt.textContent = modelId;
+        select.appendChild(opt);
+    });
+
+    if (currentVal) {
+        const exists = Array.from(select.options).some(o => o.value === currentVal);
+        if (!exists && filtered.length > 0) select.value = filtered[0];
+        else if (exists) select.value = currentVal;
+    } else if (filtered.length > 0) {
+        select.value = filtered[0];
+    }
+
+    saveSettings();
+}
+function filterModels(dudeId) { updateModelUI(dudeId); }
+
+function updateSliders() {
+    document.getElementById('dudeA-temp-val').textContent = document.getElementById('dudeA-temp').value;
+    document.getElementById('dudeB-temp-val').textContent = document.getElementById('dudeB-temp').value;
+    document.getElementById('dudeC-temp-val').textContent = document.getElementById('dudeC-temp').value;
+    document.getElementById('speed-val').textContent = document.getElementById('speech-rate').value + 'x';
+    document.getElementById('pitch-A-val').textContent = pitchValues.dudeA;
+    document.getElementById('pitch-B-val').textContent = pitchValues.dudeB;
+    document.getElementById('pitch-C-val').textContent = pitchValues.dudeC;
+    saveSettings();
+}
+
+function updateFlowSettings() {
+    const chance = document.getElementById('flow-repeat-chance').value;
+    const dist = document.getElementById('flow-repeat-distance').value;
+
+    flowState.repeatChance = chance / 100;
+    flowState.repeatDistance = dist * 1500; 
+
+    document.getElementById('repeat-chance-label').innerText = chance;
+    document.getElementById('repeat-dist-label').innerText = dist;
+    saveSettings();
+}
+
+// ÚJ FÜGGVÉNY: Auto-Input Toggle
+function toggleFlowAutoInput() {
+    flowState.autoInput = document.getElementById('flow-auto-input').checked;
+    saveSettings();
+    if (flowState.autoInput) {
+        showNotification("📄 Auto-Input BEKAPCSOLVA");
+    } else {
+        showNotification("📄 Auto-Input KIKAPCSOLVA");
+    }
+}
+
+function updatePitch(role) {
+    const id = `pitch-${role}`;
+    const val = parseFloat(document.getElementById(id).value).toFixed(2);
+    pitchValues[`dude${role}`] = val;
+    document.getElementById(`${id}-val`).textContent = val;
+    saveSettings();
+}
+
+// ========== KARAKTER SELECTOR ========== 
+function initCharacterSelectors() {
+    const selA = document.getElementById('select-A');
+    const selB = document.getElementById('select-B');
+    const selC = document.getElementById('select-C');
+
+    if (typeof AI_CHARACTERS === 'undefined') {
+        console.warn("⚠️ characters.js nem található. Alapértelmezett stílusok.");
+        [selA, selB, selC].forEach(sel => {
+            if (sel) sel.innerHTML = '<option value="default">-- Karakterek nem elérhetők --</option>';
+        });
+        return;
+    }
+
+    populateSelect(selA, AI_CHARACTERS.students, 'Tanítvány');
+    populateSelect(selC, AI_CHARACTERS.students, 'Tanítvány');
+    populateSelect(selB, AI_CHARACTERS.teachers, 'Tanár');
+    console.log("✅ Karakterlisták betöltve");
+}
+function populateSelect(selectElement, dataSource, roleName) {
+    if (!selectElement) return;
+    selectElement.innerHTML = `<option value="default">-- Válassz ${roleName} karaktert --</option>`;
+    const groups = {};
+    for (const [id, data] of Object.entries(dataSource)) {
+        if (id === 'default') continue;
+        const category = data.category || 'Egyéb';
+        if (!groups[category]) groups[category] = [];
+        groups[category].push({ id, ...data });
+    }
+    for (const [categoryName, items] of Object.entries(groups)) {
+        const group = document.createElement('optgroup');
+        group.label = categoryName;
+        items.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = `${item.name} - ${item.id}`;
+            group.appendChild(opt);
+        });
+        selectElement.appendChild(group);
+    }
+}
+function applyStyle(role) {
+    const select = document.getElementById(`select-${role}`);
+    const input = document.getElementById(`dude${role}-style`);
+    const nameInput = document.getElementById(`dude${role}-name`);
+    if (!select || !input) return;
+    if (typeof AI_CHARACTERS === 'undefined') return;
+    const category = (role === 'B') ? 'teachers' : 'students';
+    const selectedId = select.value;
+    if (selectedId && selectedId !== 'default' && AI_CHARACTERS[category][selectedId]) {
+        const charData = AI_CHARACTERS[category][selectedId];
+        if (typeof charData === 'object' && charData.prompt) input.value = charData.prompt;
+        else if (typeof charData === 'string') input.value = charData;
+        saveSettings();
+        console.log(`✅ Stílus alkalmazva ${role} szereplőre: ${selectedId}`);
+    }
+}
+function loadCharacterSelections() {
+    setTimeout(() => {
+        if (typeof AI_CHARACTERS === 'undefined') return;
+        const styles = {
+            A: document.getElementById('dudeA-style')?.value || '',
+            B: document.getElementById('dudeB-style')?.value || '',
+            C: document.getElementById('dudeC-style')?.value || ''
+        };
+        for (const role of ['A', 'B', 'C']) {
+            const select = document.getElementById(`select-${role}`);
+            if (!select) continue;
+            const catKey = (role === 'B') ? 'teachers' : 'students';
+            const currentStyle = styles[role];
+            if (!currentStyle) continue;
+            for (const [id, data] of Object.entries(AI_CHARACTERS[catKey])) {
+                const promptText = typeof data === 'object' ? data.prompt : data;
+                if (promptText === currentStyle) {
+                    select.value = id;
+                    break;
+                }
+            }
+        }
+    }, 500);
+}
+
+function randomizeCharacter(role) {
+    if (typeof AI_CHARACTERS === 'undefined') {
+        showNotification("Nincsenek karakterek betöltve!");
+        return;
+    }
+    const category = (role === 'B') ? 'teachers' : 'students';
+    const dataSource = AI_CHARACTERS[category];
+    const characterIds = Object.keys(dataSource).filter(id => id !== 'default');
+    
+    if (characterIds.length === 0) {
+        showNotification("Nincs elérhető karakter a kategóriában!");
+        return;
+    }
+    
+    const randomId = characterIds[Math.floor(Math.random() * characterIds.length)];
+    const selectElement = document.getElementById(`select-${role}`);
+    selectElement.value = randomId;
+    applyStyle(role);
+    updateMenuUI(); 
+    showNotification(`Random karakter kiválasztva: ${randomId}`);
+}
+
+// ========== SETTINGS & STORAGE ========== 
+function saveSettings() {
+    const rulesEl = document.getElementById('global-rules');
+    if (rulesEl) globalRules = rulesEl.value;
+    const settings = {
+        speechRate: document.getElementById('speech-rate').value,
+        maxSentencePause: document.getElementById('max-sentence-pause').value,
+        maxTurnPause: document.getElementById('max-turn-pause').value,
+        cActive: document.getElementById('dudeC-active').checked,
+        libLang: document.getElementById('libLanguage').value,
+        globalRules: globalRules,
+        pitch: pitchValues,
+        rate: rateValues,
+        flowState: flowState, 
+        dudes: ['dudeA','dudeB','dudeC'].map(id => ({
+            id: id,
+            name: document.getElementById(`${id}-name`).value,
+            provider: document.getElementById(`${id}-provider`).value,
+            model: document.getElementById(`${id}-model`).value,
+            temp: document.getElementById(`${id}-temp`).value,
+            style: document.getElementById(`${id}-style`).value
+        }))
+    };
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    localStorage.setItem(STORAGE_KEYS.CONVERSATION, JSON.stringify(conversationHistory));
+
+    const inputHist = JSON.parse(localStorage.getItem(STORAGE_KEYS.INPUT_HISTORY) || "[]");
+    localStorage.setItem(STORAGE_KEYS.INPUT_HISTORY, JSON.stringify(inputHist));
+}
+
+
+function loadSettings() {
+    const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    let defaultNames = { dudeA: 'Pisti', dudeB: 'Brave', dudeC: 'Tsunami' };
+    let settingsLoaded = false;
+
+    if (saved) {
+        try {
+            const s = JSON.parse(saved);
+            
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el && val !== undefined) el.value = val;
+            };
+
+            setVal('speech-rate', s.speechRate);
+            setVal('max-sentence-pause', s.maxSentencePause);
+            setVal('max-turn-pause', s.maxTurnPause);
+            setVal('libLanguage', s.libLang);
+
+            if (s.globalRules !== undefined) {
+                globalRules = s.globalRules;
+                const grEl = document.getElementById('global-rules');
+                if (grEl) grEl.value = globalRules;
+            }
+
+            if (s.pitch) pitchValues = s.pitch;
+            if (s.rate) rateValues = s.rate;
+            
+            if (s.flowState) {
+                flowState = { ...flowState, ...s.flowState };
+                document.getElementById('flow-mode-active').checked = flowState.active;
+                document.getElementById('flow-position').value = ((flowState.currentIndex / (teacherLibraries.length > 0 ? teacherLibraries[0].content.length : 1)) * 100).toFixed(1);
+                document.getElementById('flow-percent-label').innerText = document.getElementById('flow-position').value;
+                document.getElementById('current-chapter-display').innerText = flowState.lastChapter || "-";
+
+                document.getElementById('flow-repeat-chance').value = Math.round(flowState.repeatChance * 100);
+                document.getElementById('repeat-chance-label').innerText = Math.round(flowState.repeatChance * 100);
+                document.getElementById('flow-repeat-distance').value = Math.round(flowState.repeatDistance / 1500);
+                document.getElementById('repeat-dist-label').innerText = Math.round(flowState.repeatDistance / 1500);
+                
+                const flowInput = document.getElementById('menu-flowsize-input');
+                if(flowInput) flowInput.value = flowState.chunkSize;
+
+                // Auto-Input állapot visszaállítása
+                const autoInputCheckbox = document.getElementById('flow-auto-input');
+                if (autoInputCheckbox) {
+                    autoInputCheckbox.checked = !!flowState.autoInput;
+                }
+            }
+
+            const cActEl = document.getElementById('dudeC-active');
+            if (cActEl && s.cActive !== undefined) cActEl.checked = s.cActive;
+            if (typeof toggleDudeC === "function") toggleDudeC();
+
+            if (Array.isArray(s.dudes)) {
+                s.dudes.forEach(d => {
+                    const nameEl = document.getElementById(`${d.id}-name`);
+                    const provEl = document.getElementById(`${d.id}-provider`);
+                    const tempEl = document.getElementById(`${d.id}-temp`);
+                    const styleEl = document.getElementById(`${d.id}-style`);
+
+                    if (nameEl) nameEl.value = d.name || defaultNames[d.id];
+                    if (provEl) provEl.value = d.provider;
+                    if (tempEl) tempEl.value = d.temp;
+                    if (styleEl) styleEl.value = d.style;
+                    
+                    if (typeof updateModelUI === "function") {
+                        setTimeout(() => updateModelUI(d.id, d.model), 100);
+                    }
+                });
+                settingsLoaded = true;
+            }
+        } catch (e) {
+            console.error("Settings parse error", e);
+        }
+    }
+
+    if (!settingsLoaded) {
+        defaultNames = { dudeA: 'Pisti', dudeB: 'Brave', dudeC: 'Tsunami' };
+        ['dudeA','dudeB','dudeC'].forEach(id => {
+            document.getElementById(`${id}-name`).value = defaultNames[id];
+            if (typeof updateModelUI === "function") updateModelUI(id);
+        });
+        if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
+            saveSettings(); 
+        }
+    }
+
+    if (typeof updateSliders === "function") updateSliders();
+
+    const hist = localStorage.getItem(STORAGE_KEYS.CONVERSATION);
+    if (hist) {
+        try {
+            conversationHistory = JSON.parse(hist);
+            const chatWin = document.getElementById('chat-window');
+            if (chatWin) {
+                chatWin.innerHTML = '';
+                conversationHistory.forEach(msg => {
+                    if (typeof renderBubble === "function") renderBubble(msg);
+                });
+            }
+            
+            const countEl = document.getElementById('msg-count');
+            if (countEl) countEl.textContent = conversationHistory.length;
+            
+            window.aiChatHistory = conversationHistory.map(msg => ({
+                role: "user",
+                content: `${msg.name}: ${msg.text}`
+            }));
+            
+            if (conversationHistory.length > 0) currentReviewIndex = conversationHistory.length - 1;
+        } catch (e) { 
+            console.warn("History error", e); 
+        }
+    }
+
+    if (typeof loadCharacterSelections === "function") loadCharacterSelections();
+}
+
+// ========== RAG / KÖNYVTÁR ========== 
+function clearLibraries() {
+    teacherLibraries = [];
+    flowState = { 
+        active: false,
+        currentIndex: 0,
+        bookmark: 0,
+        chunkSize: 1500,
+        lastChapter: "Kezdet",
+        repeatChance: 0.2,
+        repeatDistance: 3000,
+        autoInput: flowState.autoInput // Megtartjuk az auto input beállítást
+    };
+    localStorage.removeItem(STORAGE_KEYS.FLOW_BOOKMARK); 
+    renderLibraryList();
+    updateFlowControlsUI(); 
+    console.log("📚 Könyvtár kiürítve.");
+}
+
+function loadLibrary(event) {
+    const files = event.target.files;
+    if (!files.length) return;
+
+    for (let file of files) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            let content = e.target.result;
+            content = processSRT(content);
+            if (!teacherLibraries.some(lib => lib.name === file.name)) {
+                teacherLibraries.push({ name: file.name, content: content });
+                renderLibraryList();
+                if (teacherLibraries.length === 1 && flowState.active) {
+                    flowState.currentIndex = 0; 
+                    updateUIFromFlow();
+                    document.getElementById('current-chapter-display').innerText = flowState.lastChapter;
+                }
+            }
+        };
+        reader.readAsText(file);
+    }
+    event.target.value = '';
+}
+
+async function loadFromClipboard() {
+    try {
+        let text = await navigator.clipboard.readText();
+        
+        if (text && text.trim().length > 0) {
+            text = processSRT(text);
+            teacherLibraries.push({
+                name: "Vágólap (Clipboard)",
+                content: text
+            });
+            
+            renderLibraryList();
+            showNotification("✅ Vágólap tartalma betöltve!");
+            
+            if (teacherLibraries.length === 1 && flowState.active) {
+                flowState.currentIndex = 0;
+                updateUIFromFlow();
+                document.getElementById('current-chapter-display').innerText = flowState.lastChapter;
+            }
+        } else {
+            showNotification("⚠️ A vágólap üres.");
+        }
+    } catch (err) {
+        console.error("Clipboard hiba:", err);
+        showNotification("❌ Hiba: Nincs jogosultság a vágálap olvasásához.");
+    }
+}
+
+function renderLibraryList() {
+    const statusLabel = document.getElementById('lib-status');
+    if (teacherLibraries.length === 0) {
+        statusLabel.textContent = "📖 Nincs könyv betöltve";
+        statusLabel.style.display = 'none'; 
+        return;
+    }
+    const names = teacherLibraries.map(l => l.name).join(", ");
+    statusLabel.textContent = `📖 Betöltve (${teacherLibraries.length}): ${names}`;
+    statusLabel.style.display = 'inline-block'; 
+}
+
+async function translateText(text, targetLang = 'hu') {
+    if (!text) return "";
+    try {
+        const email = TRANSLATOR_EMAIL || "user@example.com"; 
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.substring(0, 1000))}&langpair=en|${targetLang}&de=${email}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        return data.responseData.translatedText;
+    } catch (e) {
+        console.error("Translation error:", e);
+        return text;
+    }
+}
+
+async function googleTranslate(text) {
+    if (!text || text.length < 10) return "Nincs feldolgozható találat.";
+    try {
+        const chunks = text.match(/[\s\S]{1,3000}/g) || [];
+        let full = "";
+        for (let chunk of chunks) {
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=hu&dt=t&q=${encodeURIComponent(chunk)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            data[0].forEach(item => { if (item[0]) full += item[0]; });
+        }
+        return full;
+    } catch (e) { return "Fordítási hiba történt."; }
+}
+function cleanAndParse(raw) {
+    let clean = raw.replace(/!\[.*?\]\(.*?\)/g, '')
+        .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+        .replace(/URL Source:.*?Markdown Content:/gs, '')
+        .replace(/[=\-*]{3,}/g, '\n');
+    let lines = clean.split('\n').map(l => l.trim()).filter(l => l.length > 30);
+    let results = [];
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].length < 160 && lines[i+1] && lines[i+1].length > 40) {
+            results.push({ title: lines[i], desc: lines[i+1] });
+            i++;
+        }
+    }
+    return results;
+}
+
+async function searchInSingleLibrary(query, libraryContent, length = 600) {
+    if (!libraryContent) return "";
+    const libLang = document.getElementById('libLanguage').value;
+    const email = TRANSLATOR_EMAIL || "user@example.com"; 
+    let words = query.toLowerCase()
+        .replace(/[.,!?;:\""„”]/g, '')
+        .split(' ')
+        .filter(w => w.length > 3);
+    let searchString = words.join(' ');
+    if (libLang !== 'hu' && words.length > 0) {
+        console.log("%c🌍 Fordítás indítása a kereséshez...", "color: #8957e5; font-weight: bold;");
+        try {
+            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(searchString)}&langpair=hu|${libLang}&de=${email}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            searchString = data.responseData.translatedText;
+        } catch (error) {
+            console.error("Fordítási hiba, marad az eredeti kulcsszó.", error);
+        }
+    }
+    const stopWords = [
+        'the','you','will','just','and','that','this','with','from','your','have',
+        'would','should','hogy','lesz','vagy','mint','csak','mert','majd','vagyok',
+        'vagyunk','lett','volt'
+    ];
+    const searchWords = searchString.toLowerCase()
+        .replace(/[.,!?;:\""„”]/g, ' ')
+        .split(' ')
+        .filter(w => w.length > 2 && !stopWords.includes(w));
+    console.log(`%c🔍 TISZTÍTOTT KULCSSZAVAK (${libLang}):`, "color: #58a6ff; font-weight: bold;", searchWords);
+    let bestIndex = -1;
+    let maxHits = 0;
+    const paragraphs = libraryContent.split('\n\n');
+    for (let p of paragraphs) {
+        let hits = 0;
+        const pLow = p.toLowerCase();
+        searchWords.forEach(w => { if (pLow.includes(w)) hits++; });
+        if (hits > maxHits) {
+            maxHits = hits;
+            bestIndex = libraryContent.indexOf(p);
+        }
+    }
+    if (bestIndex !== -1 && maxHits > 0) {
+        console.log(`%c✅ TALÁLAT: ${maxHits} releváns egyezés.`, "color: #238636; font-weight: bold;");
+        return libraryContent.substring(bestIndex, bestIndex + length);
+    } else {
+        const randomIndex = Math.floor(Math.random() * (libraryContent.length - length));
+        console.log("%c🎲 VÉLETLEN: Nincs érdemi egyezés, véletlen részletet küldök.", "color: #da3633; font-weight: bold;");
+        return "[VÉLETLEN RÉSZLET A KÖNYVTÁRHOZ]: " + libraryContent.substring(randomIndex, randomIndex + length);
+    }
+}
+
+async function findRelevantSnippet(query, libraries) {
+    if (!libraries || libraries.length === 0) return "";
+    const content = libraries[0].content;
+    return await searchInSingleLibrary(query, content, 600);
+}
+
+function detectChapter(text) {
+    const chapterRegex = /(?:^|\n\n)(?:Fejezet|Chapter|\d+\.|\*+\s*\d+\s*\*+)\s*[:\-–\s]*([^\n]+)/i;
+    const match = text.match(chapterRegex);
+    return match ? match[1].trim() : null;
+}
+
+function updateFlowControlsUI() {
+    const controls = document.getElementById('flow-controls');
+    if (!controls) return;
+    controls.style.opacity = flowState.active ? "1" : "0.5";
+    controls.style.pointerEvents = flowState.active ? "auto" : "none";
+    if (teacherLibraries.length === 0) {
+        document.getElementById('flow-percent-label').innerText = "0";
+        document.getElementById('flow-position').value = "0";
+        document.getElementById('current-chapter-display').innerText = "-";
+        return;
+    }
+    const totalLength = teacherLibraries[0].content.length;
+    const percent = ((flowState.currentIndex / totalLength) * 100).toFixed(1);
+    document.getElementById('flow-position').value = percent;
+    document.getElementById('flow-percent-label').innerText = percent;
+    document.getElementById('current-chapter-display').innerText = flowState.lastChapter || "-";
+}
+
+function toggleFlowMode() {
+    flowState.active = document.getElementById('flow-mode-active').checked;
+    updateFlowControlsUI();
+    if(flowState.active) {
+        if (teacherLibraries.length === 0) {
+            showNotification("Nincs betöltve könyv a FlowBookReader módhoz!");
+            document.getElementById('flow-mode-active').checked = false; 
+            flowState.active = false;
+            return;
+        }
+        speakText("Flow Book Reader mód aktiválva. Folyamatos olvasás indul.");
+        updateUIFromFlow();
+    } else {
+        speakText("Flow Book Reader mód kikapcsolva.");
+    }
+    saveSettings();
+}
+
+function updateFlowPosition() {
+    if (!teacherLibraries.length || !flowState.active) return;
+    const totalLength = teacherLibraries[0].content.length;
+    const percent = parseFloat(document.getElementById('flow-position').value);
+    flowState.currentIndex = Math.floor((percent / 100) * totalLength);
+    document.getElementById('flow-percent-label').innerText = percent.toFixed(1);
+    document.getElementById('current-chapter-display').innerText = flowState.lastChapter || "-"; 
+    saveSettings();
+}
+
+function saveBookmark() {
+    if (!teacherLibraries.length || !flowState.active) {
+        showNotification("Nincs aktív könyv vagy mód a könyvjelző mentéséhez.");
+        return;
+    }
+    flowState.bookmark = flowState.currentIndex;
+    localStorage.setItem(STORAGE_KEYS.FLOW_BOOKMARK, flowState.bookmark);
+    showNotification("Könyvjelző elmentve: " + document.getElementById('flow-percent-label').innerText + "%");
+    saveSettings(); 
+}
+
+function loadBookmark() {
+    const saved = localStorage.getItem(STORAGE_KEYS.FLOW_BOOKMARK);
+    if(saved) {
+        flowState.currentIndex = parseInt(saved);
+        if (!flowState.active) {
+            document.getElementById('flow-mode-active').checked = true;
+            toggleFlowMode();
+        }
+        updateUIFromFlow();
+        showNotification("Könyvjelző betöltve.");
+    } else {
+        showNotification("Nincs mentett könyvjelző.");
+    }
+}
+
+function updateUIFromFlow() {
+    if (!teacherLibraries.length) return;
+    const totalLength = teacherLibraries[0].content.length;
+    const percent = ((flowState.currentIndex / totalLength) * 100).toFixed(1);
+    document.getElementById('flow-position').value = percent;
+    document.getElementById('flow-percent-label').innerText = percent;
+    document.getElementById('current-chapter-display').innerText = flowState.lastChapter || "-";
+}
+
+async function getContextForB() {
+    if (!teacherLibraries.length) return "";
+    const book = teacherLibraries[0].content;
+    const totalLength = book.length;
+    if (Math.random() < flowState.repeatChance && flowState.currentIndex > flowState.repeatDistance) {
+        const randomBackStep = Math.floor(Math.random() * flowState.repeatDistance);
+        const tempIndex = Math.max(0, flowState.currentIndex - randomBackStep);
+        return "ISMÉTLŐ ÁTTEKINTÉS: " + book.substring(tempIndex, tempIndex + flowState.chunkSize);
+    }
+    let context = book.substring(flowState.currentIndex, flowState.currentIndex + flowState.chunkSize);
+    const chapter = detectChapter(context);
+    if (chapter) {
+        flowState.lastChapter = chapter;
+        document.getElementById('current-chapter-display').innerText = chapter;
+    }
+    flowState.currentIndex += flowState.chunkSize;
+    if (flowState.currentIndex >= totalLength) {
+        flowState.currentIndex = 0;
+        showNotification("A könyv végére értünk, újrakezdés.");
+        flowState.lastChapter = "Kezdet";
+        document.getElementById('current-chapter-display').innerText = flowState.lastChapter;
+    }
+    updateUIFromFlow();
+    return context;
+}
+
+// ========== CHAT ENGINE ========== 
+function renderBubble(msg) {
+    const chat = document.getElementById('chat-window');
+    if (chat.innerText.includes("Válassz modellt")) chat.innerHTML = "";
+    const bubble = document.createElement('div');
+    const names = {
+        a: document.getElementById('dudeA-name').value,
+        b: document.getElementById('dudeB-name').value,
+        c: document.getElementById('dudeC-name').value
+    };
+    let roleClass = 'dudeA';
+    if (msg.name === names.b || (msg.name === 'b' && !Object.values(names).includes('b'))) roleClass = 'dudeB';
+    if (msg.name === names.c || (msg.name === 'c' && !Object.values(names).includes('c'))) roleClass = 'dudeC';
+    if (msg.name === 'Rendszer') roleClass = 'dudeC';
+    bubble.className = `bubble ${roleClass}`;
+    const mdContent = marked.parse(msg.text);
+    const sourceHtml = msg.aiSource ? `<div class="meta-info"><span>${msg.aiSource}</span><span>${msg.timestamp}</span></div>` : '';
+    bubble.innerHTML = `
+        <span class="role-tag">${msg.name}</span>
+        <div class="markdown-body">${mdContent}</div>
+        ${sourceHtml}
+    `;
+    chat.appendChild(bubble);
+    chat.scrollTop = chat.scrollHeight;
+}
+function addToHistory(name, text, source) {
+    const timestamp = new Date().toLocaleTimeString('hu-HU', {hour:'2-digit', minute:'2-digit'});
+    const msgObj = { name, text, aiSource: source, timestamp };
+    conversationHistory.push(msgObj);
+    history.push({ role: "user", content: `${name}: ${text}` });
+    renderBubble(msgObj);
+    document.getElementById('msg-count').textContent = conversationHistory.length;
+    currentReviewIndex = conversationHistory.length - 1;
+    saveSettings();
+    const inputHist = JSON.parse(localStorage.getItem(STORAGE_KEYS.INPUT_HISTORY) || "[]");
+    inputHist.push(text);
+    localStorage.setItem(STORAGE_KEYS.INPUT_HISTORY, JSON.stringify(inputHist));
+}
+
+async function callAI(dudeId, systemPrompt, userPrompt) {
+    const provider = document.getElementById(`${dudeId}-provider`).value;
+    const model = document.getElementById(`${dudeId}-model`).value;
+    const temp = parseFloat(document.getElementById(`${dudeId}-temp`).value);
+    
+    if (globalRules && globalRules.trim().length > 0) {
+        systemPrompt += `\n\n[GLOBÁLIS RENDSZER SZABÁLYOK - EZEKET MINDIG TARTSD BE]:\n${globalRules}`;
+    }
+    
+    const actualModel = model || (provider === 'groq' ? 'llama3-70b-8192' : 'gpt-4o-mini');
+    
+    try {
+        if (provider === 'puter') {
+            // --- PUTER.JS ÁG ---
+            const puterOptions = {
+                model: actualModel,
+                temperature: temp
+            };
+
+            // >>> ITT A MÓDOSÍTÁS (Puter) <<<
+            if (actualModel.toLowerCase().includes("qwen") || actualModel.toLowerCase().includes("deepseek")) {
+                puterOptions.reasoning_format = "hidden";
+            }
+
+            const fullPrompt = `RENDSZER: ${systemPrompt}\n\nELŐZMÉNYEK:\n${JSON.stringify(history.slice(-contextSize))}\n\nMOST: ${userPrompt}`;
+            const response = await puter.ai.chat(fullPrompt, puterOptions);
+            return { text: response.message.content, source: `Puter (${actualModel})` };
+            
+        } else {
+            // --- GROQ ÁG (Fetch) ---
+            const messages = [
+                { role: "system", content: systemPrompt },
+                ...history.slice(-contextSize),
+                { role: "user", content: userPrompt }
+            ];
+
+            // Request body összeállítása objektumként
+            const bodyData = {
+                model: actualModel,
+                messages: messages,
+                temperature: temp
+            };
+
+            // >>> ITT A MÓDOSÍTÁS (Groq) <<<
+            if (actualModel.toLowerCase().includes("qwen") || actualModel.toLowerCase().includes("deepseek")) {
+                bodyData.reasoning_format = "hidden";
+            }
+
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${API_KEY_GROQ}`, "Content-Type": "application/json" },
+                body: JSON.stringify(bodyData) // Itt használjuk a módosított objektumot
+            });
+            const data = await response.json();
+            return { text: data.choices[0].message.content, source: `Groq (${actualModel})` };
+        }
+    } catch (e) {
+        console.error("AI Hiba:", e);
+        return { text: "Hiba történt a kommunikációban: " + e.message, source: "System Error" };
+    }
+}
+
+async function startEngine() {
+    if (isRunning) return;
+    if (!API_KEY_GROQ) {
+        showNotification("❌ Nincs Groq API Key!");
+        toggleApiKeyPopup();
+        return;
+    }
+    isRunning = true;
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    let turnIndex = 0;
+    let turnsWithTopic = 0;
+    const names = {
+        a: document.getElementById('dudeA-name').value,
+        b: document.getElementById('dudeB-name').value,
+        c: document.getElementById('dudeC-name').value
+    };
+    const getIdByName = (name) => {
+        if (name === names.a) return 'dudeA';
+        if (name === names.b) return 'dudeB';
+        if (name === names.c) return 'dudeC';
+        return null;
+    };
+    if (conversationHistory.length > 0) {
+        const lastName = conversationHistory[conversationHistory.length - 1].name;
+        turnIndex = 0; 
+    }
+    while (isRunning) {
+        const isRAGorFlow = (teacherLibraries.length > 0 || flowState.active);
+        let sequence = [];
+        if (isRAGorFlow) {
+            sequence = ['dudeB', 'dudeA', 'dudeC'];
+        } else {
+            sequence = ['dudeA', 'dudeB', 'dudeC'];
+        }
+        const isCActive = document.getElementById('dudeC-active').checked;
+        if (!isCActive) {
+            sequence = sequence.filter(id => id !== 'dudeC');
+        }
+        if (sequence.length === 0) {
+            stopEngine();
+            break;
+        }
+        let currentId = sequence[turnIndex % sequence.length];
+        if (turnIndex === 0 && conversationHistory.length > 0) {
+            const lastName = conversationHistory[conversationHistory.length - 1].name;
+            const lastId = getIdByName(lastName);
+            const lastPosInSeq = sequence.indexOf(lastId);
+            if (lastPosInSeq !== -1) {
+                turnIndex = lastPosInSeq + 1;
+                currentId = sequence[turnIndex % sequence.length];
+            }
+        }
+        const roleId = currentId;
+        const currentNames = {
+            a: document.getElementById('dudeA-name').value,
+            b: document.getElementById('dudeB-name').value,
+            c: document.getElementById('dudeC-name').value
+        };
+        const styles = {
+            a: document.getElementById('dudeA-style').value,
+            b: document.getElementById('dudeB-style').value,
+            c: document.getElementById('dudeC-style').value
+        };
+        let currentName;
+        let prompt;
+        const globalRulesText = "Válaszolj maximum 3 mondatban! Kerüld az AI-asszisztens stílust, beszélj úgy, mint egy ember egy chaten. Kerüld a szóismétléseket, ne kezdd mindig ugyanúgy a mondatokat!";
+
+        let contextSnippet = ""; // Inicializálás
+
+        if (currentId === 'dudeB') {
+            currentName = currentNames.b;
+            
+            // --- KONTEXTUS LEKÉRÉSE LOGIKA ---
+            if (flowState.active && teacherLibraries.length > 0) {
+                console.log("%c📖 FlowBookReader mód aktív. Kontextus lekérése...", "color: #58a6ff; font-weight: bold;");
+                contextSnippet = await getContextForB();
+            } else if (teacherLibraries.length > 0) { 
+                const lastMsg = conversationHistory.length > 0 ? conversationHistory[conversationHistory.length - 1].text : "";
+                contextSnippet = await findRelevantSnippet(lastMsg, teacherLibraries);
+                console.log("%c📚 RAG mód aktív. Kontextus lekérése...", "color: #f2ce7e; font-weight: bold;");
+            }
+
+            // --- ÚJ LOGIKA: AUTO INPUT ---
+            if (flowState.autoInput && contextSnippet) {
+                const topicInput = document.getElementById('current-topic');
+                // Hozzáfűzzük a szöveget a meglévő témához
+                // Limitáljuk, hogy túl nagy ne legyen egy input mezőben, de a kérés a beküldés volt.
+                topicInput.value += (topicInput.value ? "\n\n" : "") + "📖 [Könyv részlet]: " + contextSnippet;
+            }
+
+            if (contextSnippet) {
+                const modeType = flowState.active ? "🌊 FLOWBOOKREADER" : "📚 BOOKREADER (RAG)";
+                console.group(`%c ${modeType} :: KONTEXTUS B KARAKTERNEK`, "color: #00ff9d; font-weight: bold; font-size: 14px; background: #222; padding: 5px; border-radius: 4px;");
+                console.log(contextSnippet);
+                console.groupEnd();
+            }
+            const targets = isCActive ? `${currentNames.a}-val és ${currentNames.c}-vel` : `${currentNames.a}-val`;
+            prompt = `Te vagy '${currentName}' (${styles.b}). ${globalRulesText} Beszélgess ${targets}.`;
+            if (contextSnippet) {
+                prompt += `\n\n[TUDÁSANYAG - HASZNÁLD A VÁLASZHOZ]:\n"""\n${contextSnippet}\n"""\nUTASÍTÁS: Építsd be a fenti adatokat a válaszodba, de ne idézd szó szerint, hanem tanítsd a többieket belőle. \nHa a kérdésre itt van a válasz, ne kerüld meg! Magyarul válaszolj.`;
+            }
+        }
+        else if (currentId === 'dudeA') {
+            currentName = currentNames.a;
+            const targets = isCActive ? `${currentNames.b}-vel és ${currentNames.c}-vel` : `${currentNames.b}-vel`;
+            prompt = `Te vagy '${currentName}' (${styles.a}). ${globalRulesText} Beszélgess ${targets}.`;
+        }
+        else { 
+            currentName = currentNames.c;
+            prompt = `Te vagy '${currentName}' (${styles.c}). ${globalRulesText} Beszélgess ${currentNames.a}-val és ${currentNames.b}-vel.`;
+        }
+        const topicInput = document.getElementById('current-topic');
+        let userMsg = `Te következel, ${currentName}. Reagálj a többiekre!`;
+        if (topicInput.value.trim() !== "") {
+            userMsg += ` JELENLEGI TÉMA: ${topicInput.value}`;
+            turnsWithTopic++;
+        }
+        const response = await callAI(roleId, prompt, userMsg);
+        if (!isRunning) break;
+        addToHistory(currentName, response.text, response.source);
+        if (turnsWithTopic >= (isCActive ? 3 : 2)) {
+            topicInput.value = "";
+            turnsWithTopic = 0;
+        }
+        await speak(response.text, roleId);
+        turnIndex++;
+        const maxTurnPause = parseInt(document.getElementById('max-turn-pause').value);
+        const waitTime = Math.random() * maxTurnPause;
+        await new Promise(r => setTimeout(r, waitTime));
+    }
+}
+function stopEngine() {
+    isRunning = false;
+    document.getElementById('startBtn').style.display = 'inline-block';
+    document.getElementById('stopBtn').style.display = 'none';
+    window.speechSynthesis.cancel();
+}
+function toggleEngine() { if (isRunning) stopEngine(); else startEngine(); }
+
+// ========== TTS ========== 
+function speak(text, roleId) {
+    return new Promise(async (resolve) => {
+        const myToken = ++speechToken; 
+        const clean = text.replace(/[*#`_\[\]]/g, '');
+        const sentences = clean.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [clean];
+        const maxSentencePause = parseInt(document.getElementById('max-sentence-pause').value);
+        for (let i = 0; i < sentences.length; i++) {
+            if (speechToken !== myToken) { resolve(); return; }
+            if (!isRunning && !window.manualSpeak) {
+                if (!window.manualSpeak) break;
+            }
+            const sentence = sentences[i].trim();
+            if (sentence.length === 0) continue;
+            await new Promise(r => {
+                const u = new SpeechSynthesisUtterance(sentence);
+                u.lang = 'hu-HU';
+                u.rate = rateValues[roleId] || parseFloat(document.getElementById('speech-rate').value);
+                if (pitchValues[roleId]) u.pitch = parseFloat(pitchValues[roleId]);
+                u.onend = r;
+                u.onerror = () => { r(); };
+                window.speechSynthesis.speak(u);
+            });
+            if (speechToken !== myToken) { resolve(); return; }
+            if (i < sentences.length - 1) {
+                const pause = Math.random() * maxSentencePause;
+                await new Promise(r => setTimeout(r, pause));
+            }
+        }
+        window.manualSpeak = false;
+        resolve();
+    });
+}
+function speakAnnounce(text) {
+    speechToken++; 
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'hu-HU';
+    u.rate = 1.0;
+    u.pitch = 1.0;
+    window.speechSynthesis.speak(u);
+}
+function speakMessageAtIndex(index) {
+    if (index < 0 || index >= conversationHistory.length) return;
+    window.speechSynthesis.cancel();
+    const msg = conversationHistory[index];
+    const names = {
+        a: document.getElementById('dudeA-name').value,
+        b: document.getElementById('dudeB-name').value,
+        c: document.getElementById('dudeC-name').value
+    };
+    let roleId = 'dudeA';
+    if (msg.name === names.b || (msg.name === 'b' && !Object.values(names).includes('b'))) roleId = 'dudeB';
+    if (msg.name === names.c || (msg.name === 'c' && !Object.values(names).includes('c'))) roleId = 'dudeC';
+    window.manualSpeak = true;
+    speak(msg.text, roleId);
+}
+
+// ========== TÉMA ---------- 
+async function getNewTopic() {
+    const res = await callAI('dudeB', 'Adj egy rövid vitatémát.', 'Csak a témát írd le egy mondatban.');
+    document.getElementById('current-topic').value = res.text.replace(/[""]/g, '');
+}
+
+// ========== RANDOM WORD GENERATOR ---------- 
+async function insertRandomWord() {
+    if (!wordTranslator) {
+        showNotification("Hiba: WordTranslator nincs betöltve!");
+        return;
+    }
+    try {
+        showNotification("Generálás...");
+        const result = await wordTranslator.getNextWord();
+        const word = result.word;
+        const topicInput = document.getElementById('current-topic');
+        if (topicInput.value.trim() !== "") {
+            topicInput.value += " " + word;
+        } else {
+            topicInput.value = word;
+        }
+        showNotification("Beszúrva: " + word);
+        speakText(topicInput.value);
+        topicInput.blur();
+    } catch (error) {
+        console.error(error);
+        showNotification("Hiba a generálásnál");
+    }
+}
+
+// ========== FRISS START ---------- 
+function freshStart() {
+    if (confirm("Biztos törlöd az egészet?")) {
+        stopEngine();
+        history = [];
+        conversationHistory = [];
+        document.getElementById('chat-window').innerHTML = '<div style="text-align:center; color:var(--txt2); margin-top:200px; font-style:italic; font-size:1.1rem;">"Tiszta lap..."</div>';
+        document.getElementById('msg-count').textContent = 0;
+        localStorage.removeItem(STORAGE_KEYS.CONVERSATION);
+        localStorage.removeItem(STORAGE_KEYS.INPUT_HISTORY);
+        clearLibraries();
+    }
+}
+
+// ========== JSON EXPORT / IMPORT ========== 
+function saveConversationToJSON() {
+    saveSettings();
+    const fullState = {
+        timestamp: Date.now(),
+        settings: JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS)),
+        history: conversationHistory,
+        libraries: teacherLibraries 
+    };
+    const jsonString = JSON.stringify(fullState, null, 2);
+    const blob = new Blob([jsonString], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `chat_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+}
+function loadConversationFromJSON(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = (ev) => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            if (!data.history || !data.settings) {
+                alert("Hiba: Érvénytelen biztonsági mentés fájl!");
+                return;
+            }
+            if (confirm(`Betöltesz ${data.history.length} üzenetet, a korábbi beállításokat és ${data.libraries ? data.libraries.length : 0} könyvtárat? A jelenlegi állapot felülíródik.`)) {
+                stopEngine();
+                localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
+                localStorage.setItem(STORAGE_KEYS.CONVERSATION, JSON.stringify(data.history));
+                conversationHistory = data.history;
+                if (data.libraries) {
+                    teacherLibraries = data.libraries;
+                } else {
+                    teacherLibraries = []; 
+                }
+                loadSettings(); 
+                renderLibraryList(); 
+                alert("✅ Sikeres visszaállítás!");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Hiba történt a fájl feldolgozása során.");
+        }
+        document.getElementById('fileInput').value = '';
+    };
+    r.readAsText(file);
+}
+
+// ========== JOYPAD & BUBBLE ========== 
+function showNotification(text) { 
+    const bubble = document.getElementById('notificationBubble');
+    const bubbleText = document.getElementById('bubbleText');
+    bubbleText.textContent = text;
+    bubble.classList.add('bubble-visible');
+    setTimeout(() => bubble.classList.remove('bubble-visible'), 1500);
+}
+function showBubble(layer) {
+    const bubble = document.getElementById('notificationBubble');
+    const bubbleLayer = document.getElementById('bubbleLayer');
+    const bubbleText = document.getElementById('bubbleText');
+    bubbleLayer.textContent = layer;
+    bubbleText.textContent = layerNames[layer];
+    bubble.classList.add('bubble-visible');
+    setTimeout(() => bubble.classList.remove('bubble-visible'), 1500);
+}
+const layerNamesVoice = {
+    1: "layer1",
+    2: "layer2",
+    3: "layer3"
+};
+function switchLayer() {
+    currentLayer = (currentLayer % 3) + 1;
+    showBubble(currentLayer);
+    speakAnnounce(layerNamesVoice[currentLayer]);
+}
+function handleLayerAction() {
+    const topicInput = document.getElementById('current-topic');
+    if (currentLayer === 3) {
+        topicInput.value = "";
+        showBubble(3);
+    }
+}
+
+// ========== NAVIGÁCIÓ (Layer 1) ========== 
+function navigateHistory(direction) {
+    if (isRunning) stopEngine();
+    window.speechSynthesis.cancel();
+    if (direction === 'info') {
+        const total = conversationHistory.length;
+        const current = currentReviewIndex + 1;
+        speakAnnounce(`${current}. üzenet a(z) ${total}-ből`);
+        return;
+    }
+    if (direction === 'prev') {
+        if (currentReviewIndex <= 0) {
+            currentReviewIndex = 0;
+            speakAnnounce("Eleje");
+        } else {
+            currentReviewIndex--;
+            speakMessageAtIndex(currentReviewIndex);
+        }
+    } else if (direction === 'next') {
+        if (currentReviewIndex >= conversationHistory.length - 1) {
+            currentReviewIndex = conversationHistory.length - 1;
+            speakAnnounce("Vége");
+        } else {
+            currentReviewIndex++;
+            speakMessageAtIndex(currentReviewIndex);
+        }
+    }
+}
+
+// ========== MENÜ LOGIKA ========== 
+function toggleMenu() {
+    isMenuActive = !isMenuActive;
+    const menu = document.getElementById('menuPopup');
+    if (isMenuActive) {
+        window.speechSynthesis.cancel();
+        menu.classList.add('visible');
+        updateMenuUI();
+        speakText("Menü. Karakter választás.");
+    } else {
+        menu.classList.remove('visible');
+        saveSettings();
+        speakText("Menü bezárva");
+    }
+}
+function getActiveDudeID() {
+    return 'dude' + chars[selectedCharIndex];
+}
+function updateMenuUI() {
+    const currentDude = getActiveDudeID();
+    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('selected'));
+    document.querySelectorAll('.menu-textarea-container').forEach(el => el.classList.remove('selected'));
+    const row = document.getElementById(`menu-row-${menuRowIndex}`);
+    if (row) row.classList.add('selected');
+    document.getElementById('menu-char-val').textContent = chars[selectedCharIndex];
+    document.getElementById('menu-prov-val').textContent = document.getElementById(`${currentDude}-provider`).value;
+    document.getElementById('menu-model-val').textContent = document.getElementById(`${currentDude}-model`).value;
+    const styleSel = document.getElementById(`select-${chars[selectedCharIndex]}`);
+    let displayText = "-- Válassz --";
+    if (styleSel.selectedIndex >= 0) {
+        const selectedOption = styleSel.options[styleSel.selectedIndex];
+        if (selectedOption.value !== 'default') {
+             const parts = selectedOption.text.split(' - ');
+             const name = parts[0];
+             const id = selectedOption.value;
+             const category = selectedOption.parentElement.label || "Egyéb";
+             displayText = `${name} ${category} / ${id}`;
+        } else {
+             displayText = selectedOption.text;
+        }
+    }
+    document.getElementById('menu-style-val').textContent = displayText;
+    if (document.activeElement !== document.getElementById('menu-pers-val')) {
+        const persVal = document.getElementById(`${currentDude}-style`).value;
+        document.getElementById('menu-pers-val').value = persVal;
+    }
+    document.getElementById('menu-temp-val').textContent = document.getElementById(`${currentDude}-temp`).value;
+    document.getElementById('menu-pitch-val').textContent = `A:${pitchValues.dudeA} B:${pitchValues.dudeB} C:${pitchValues.dudeC}`;
+    document.getElementById('menu-rate-val').textContent = `A:${rateValues.dudeA} B:${rateValues.dudeB} C:${rateValues.dudeC}`;
+    document.getElementById('menu-context-val').textContent = contextSize;
+    const flowInput = document.getElementById('menu-flowsize-input');
+    if(flowInput && flowInput.value != flowState.chunkSize) {
+        flowInput.value = flowState.chunkSize;
+    }
+}
+function navigateMenu(dir) {
+    const currentActiveElement = document.activeElement;
+    const menuPopup = document.getElementById('menuPopup');
+    if (currentActiveElement && menuPopup.contains(currentActiveElement) && (currentActiveElement.tagName === 'INPUT' || currentActiveElement.tagName === 'TEXTAREA')) {
+        currentActiveElement.blur();
+    }
+    menuRowIndex = (menuRowIndex + dir + 11) % 11;
+    updateMenuUI();
+    const rowNames = ["Karakter", "Szolgáltató", "Modell", "Stílus Preset", "Személyiség Prompt", "Hőmérséklet", "Hangmagasság", "Hangsebesség", "Globális Szabályok", "Memória kontextus mérete", "Flow Szövegméret"];
+    const values = [
+        chars[selectedCharIndex],
+        document.getElementById(`${getActiveDudeID()}-provider`).value,
+        document.getElementById(`${getActiveDudeID()}-model`).value,
+        document.getElementById('menu-style-val').textContent, 
+        document.getElementById('menu-pers-val').value,
+        document.getElementById(`${getActiveDudeID()}-temp`).value,
+        `A:${pitchValues.dudeA} B:${pitchValues.dudeB} C:${pitchValues.dudeC}`,
+        `A:${rateValues.dudeA} B:${rateValues.dudeB} C:${rateValues.dudeC}`,
+        document.getElementById('global-rules').value,
+        contextSize,
+        flowState.chunkSize
+    ];
+    if (menuRowIndex === 4) {
+        const txt = values[4].trim() === "" ? "Üres" : values[4];
+        speakText("Személyiség szerkesztő. PTT aktív. Tartalom: " + txt);
+        document.getElementById('menu-pers-val').focus();
+    } else if (menuRowIndex === 8) {
+        const txt = values[8].trim() === "" ? "Üres" : values[8];
+        speakText("Globális szabályok szerkesztő. PTT aktív. Tartalom: " + txt);
+        document.getElementById('global-rules').focus();
+    } else if (menuRowIndex === 9) {
+        speakText(`Memória kontextus mérete: ${contextSize}`);
+    } else if (menuRowIndex === 10) {
+        speakText(`Flow Szövegméret ${flowState.chunkSize} karakter`);
+    } else if (menuRowIndex === 6) {
+        speakText(`Hangmagasság. ${values[6]}`);
+    } else if (menuRowIndex === 7) {
+        speakText(`Hangsebesség. ${values[7]}`);
+    } else {
+        speakText(`${rowNames[menuRowIndex]}: ${values[menuRowIndex]}`);
+    }
+}
+function adjustValue(dir) {
+    const curDude = getActiveDudeID();
+    let elementToBlur = null; 
+    if (menuRowIndex === 0) { 
+        selectedCharIndex = (selectedCharIndex + dir + 3) % 3;
+        updateMenuUI();
+        speakText(`${chars[selectedCharIndex]} karakter`);
+        return;
+    }
+    if (menuRowIndex === 1) { 
+        const sel = document.getElementById(`${curDude}-provider`);
+        const newIdx = (sel.selectedIndex + dir + sel.options.length) % sel.options.length;
+        sel.selectedIndex = newIdx;
+        sel.dispatchEvent(new Event('change'));
+        elementToBlur = sel; 
+        setTimeout(() => { updateMenuUI(); speakText(sel.value); }, 50);
+        return;
+    }
+    if (menuRowIndex === 2) { 
+        const sel = document.getElementById(`${curDude}-model`);
+        const newIdx = (sel.selectedIndex + dir + sel.options.length) % sel.options.length;
+        sel.selectedIndex = newIdx;
+        saveSettings();
+        elementToBlur = sel; 
+        updateMenuUI();
+        speakText(sel.value);
+        return;
+    }
+    if (menuRowIndex === 3) { 
+        const sel = document.getElementById(`select-${chars[selectedCharIndex]}`);
+        const newIdx = (sel.selectedIndex + dir + sel.options.length) % sel.options.length;
+        sel.selectedIndex = newIdx;
+        applyStyle(chars[selectedCharIndex]);
+        elementToBlur = sel; 
+        updateMenuUI();
+        speakText(document.getElementById('menu-style-val').textContent);
+        return;
+    }
+    if (menuRowIndex === 5) { 
+        const input = document.getElementById(`${curDude}-temp`);
+        let val = parseFloat(input.value);
+        val += dir * 0.1;
+        if (val < 0) val = 0;
+        if (val > 2) val = 2;
+        input.value = val.toFixed(1);
+        updateSliders();
+        elementToBlur = input; 
+        updateMenuUI();
+        speakText(val.toFixed(1));
+        return;
+    }
+    if (menuRowIndex === 6) { 
+        const roleKey = `dude${chars[selectedCharIndex]}`;
+        let val = parseFloat(pitchValues[roleKey] || 0.9);
+        val += dir * 0.1;
+        if (val < 0.5) val = 0.5;
+        if (val > 2.0) val = 2.0;
+        pitchValues[roleKey] = val.toFixed(2);
+        document.getElementById(`pitch-${chars[selectedCharIndex]}`).value = pitchValues[roleKey];
+        document.getElementById(`pitch-${chars[selectedCharIndex]}-val`).textContent = pitchValues[roleKey];
+        elementToBlur = document.getElementById(`pitch-${chars[selectedCharIndex]}`); 
+        updateMenuUI();
+        speakText(`Hangmagasság ${val.toFixed(2)}`);
+        return;
+    }
+    if (menuRowIndex === 7) { 
+        const roleKey = `dude${chars[selectedCharIndex]}`;
+        let val = parseFloat(rateValues[roleKey] || 1.0);
+        val += dir * 0.1;
+        if (val < 0.5) val = 0.5;
+        if (val > 2.0) val = 2.0;
+        rateValues[roleKey] = val.toFixed(2);
+        document.getElementById('speech-rate').value = rateValues[roleKey];
+        elementToBlur = document.getElementById('speech-rate'); 
+        updateMenuUI();
+        speakText(`Hangsebesség ${val.toFixed(2)}`);
+        return;
+    }
+    if (menuRowIndex === 9) { 
+        let val = contextSize + dir;
+        if (val < 1) val = 1;
+        if (val > 20) val = 20;
+        contextSize = val;
+        elementToBlur = document.getElementById('menu-row-9'); 
+        updateMenuUI();
+        speakText(`Memória kontextus mérete ${contextSize}`);
+        return;
+    }
+    if (menuRowIndex === 10) {
+        let val = flowState.chunkSize;
+        val += dir * 100;
+        if (val < 100) val = 100;
+        if (val > 10000) val = 10000;
+        flowState.chunkSize = val;
+        document.getElementById('menu-flowsize-input').value = val;
+        elementToBlur = document.getElementById('menu-flowsize-input'); 
+        saveSettings();
+        updateMenuUI();
+        speakText(`Flow Szövegméret ${val}`);
+        return;
+    }
+    if (elementToBlur) {
+        elementToBlur.blur();
+    } else if (document.activeElement && document.activeElement.tagName !== 'BODY') {
+        document.activeElement.blur();
+    }
+}
+
+// ========== BILLENYTŰZET LISTENERS ========== 
+// ========== BILLENYTŰZET LISTENERS ========== 
+document.addEventListener('keydown', (e) => {
+    const isTyping = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+    keysPressed[e.key] = true;
+    
+    // CSAK AKKOR állítsuk le a TTS-t, ha vezérlő billentyűket nyomnak
+    const isControlKey = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'w', 'W'].includes(e.key);
+    
+    if (keysPressed['8']) {
+        stopEngine(); 
+        window.speechSynthesis.cancel(); // Itt OK, mert speciális funkció
+        if (keysPressed['1']) {
+            e.preventDefault();
+            handleWhisperAction('smart_delete');
+            return;
+        }
+        if (!e.repeat) {
+            e.preventDefault();
+            handleWhisperAction('toggle');
+        }
+        return;
+    }
+    
+    // NE állítsuk le a TTS-t normál gépelésnél!
+    if (!isTyping && isControlKey) {
+        window.speechSynthesis.cancel(); // CSAK vezérlő billentyűknél
+    }
+    
+    if (keysPressed['1']) {
+        if (keysPressed['8']) {
+             e.preventDefault();
+             handleWhisperAction('smart_delete');
+             return;
+        }
+    }
+    
+    if ((e.key === 'w' || e.key === 'W') && !isTyping) {
+        // ... W billentyű funkció ...
+        return;
+    }
+    
+    if (keysPressed['1'] && keysPressed['6']) { e.preventDefault(); location.reload(); return; }
+    if (keysPressed['1'] && keysPressed['5']) { e.preventDefault(); toggleMenu(); return; }
+    
+    if (isMenuActive) {
+        if (e.key === '2') { e.preventDefault(); navigateMenu(1); return; } 
+        if (e.key === '4') { e.preventDefault(); navigateMenu(-1); return; } 
+        if (e.key === '1') { e.preventDefault(); adjustValue(-1); return; }
+        if (e.key === '3') { e.preventDefault(); adjustValue(1); return; }
+        return;
+    }
+    
+    if (!isTyping) {
+        if (e.key === '0') { e.preventDefault(); switchLayer(); return; }
+        if (e.key === '9') { freshStart(); return; }
+        
+        if (currentLayer === 1) {
+            if (e.key === '1') navigateHistory('info');
+            if (e.key === '2') navigateHistory('prev');
+            if (e.key === '3') navigateHistory('next');
+            if (e.key === '4') toggleEngine();
+            if (e.key === '5') { e.preventDefault(); insertRandomWord(); return; }
+        }
+        else if (currentLayer === 3) {
+            if (e.key === '3') { 
+                 handleLayerAction();
+            }
+        }
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    delete keysPressed[e.key];
+});
+// =================================================================================
+// !!! MŐKÖDŐ WHISPER LOGIKA INTEGRÁLVA (AZ ELSŐ FÁJLBÓL) !!!
+// =================================================================================
+
+class WhisperHandler {
+    constructor(apiKeyGetter) {
+        this.getApiKey = apiKeyGetter;
+        this.isRecording = false;
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.currentTarget = null;
+        this.currentCallback = null;
+    }
+
+    async toggleRecording(targetElement, callback) {
+        if (this.isRecording) {
+            this.stopRecording();
+        } else {
+            await this.startRecording(targetElement, callback);
+        }
+    }
+
+    async startRecording(targetElement, callback) {
+        this.isRecording = true;
+        this.audioChunks = [];
+        this.currentTarget = targetElement;
+        this.currentCallback = callback;
+        
+        if (callback) callback("🎙️ Felvétel...", true);
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.mediaRecorder = new MediaRecorder(stream);
+            
+            this.mediaRecorder.ondataavailable = (e) => {
+                this.audioChunks.push(e.data);
+            };
+            
+            this.mediaRecorder.onstop = () => {
+                this.sendToWhisper();
+            };
+
+            this.mediaRecorder.start();
+        } catch (err) {
+            console.error("Mikrofon hiba:", err);
+            this.isRecording = false;
+            if (callback) callback("❌ Mikrofon hiba!", false);
+        }
+    }
+
+    stopRecording() {
+        if (!this.isRecording) return;
+        this.isRecording = false;
+        if (this.currentCallback) this.currentCallback("⏳ Feldolgozás...", false);
+        if (this.mediaRecorder) this.mediaRecorder.stop();
+    }
+
+    async sendToWhisper() {
+        const apiKey = this.getApiKey();
+        if (!apiKey) {
+            if (this.currentCallback) this.currentCallback("❌ Hiányzik API Key!", false);
+            return;
+        }
+
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/mpeg' });
+        const formData = new FormData();
+        formData.append("file", audioBlob, "speech.m4a");
+        formData.append("model", "whisper-large-v3-turbo");
+        formData.append("language", "hu"); 
+
+        try {
+            const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${apiKey}` },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error("API Hiba: " + response.status);
+            }
+
+            const data = await response.json();
+            const text = data.text || "";
+            
+            if (text && this.currentTarget) {
+                const currentVal = this.currentTarget.value;
+                this.currentTarget.value = currentVal ? (currentVal + " " + text) : text;
+                
+                if (this.currentCallback) {
+                    this.currentCallback("✅ Kész!", false);
+                }
+            } else {
+                if (this.currentCallback) this.currentCallback("⚠️ Nincs szöveg", false);
+            }
+        } catch (err) {
+            console.error("Whisper API Hiba:", err);
+            if (this.currentCallback) this.currentCallback("❌ API Hiba!", false);
+        }
+    }
+
+    smartDelete(targetElement, callback) {
+        if (!targetElement) return;
+        const text = targetElement.value;
+        if (!text) return;
+        
+        let lines = text.split('\n');
+        let lastLine = lines[lines.length - 1];
+        const sentences = lastLine.match(/[^.!?]+[.!?]+/g) || [lastLine];
+        
+        if (sentences.length >= 3) {
+            sentences.pop();
+            lines[lines.length - 1] = sentences.join('').trimEnd();
+        } else {
+            lines.pop();
+        }
+        
+        targetElement.value = lines.join('\n');
+        if(callback) callback("🗑️ Törölve", false);
+    }
+}
+
+function handleWhisperAction(action) {
+    const target = getPTTTargetElement() || document.getElementById('current-topic');
+    if (!target) return;
+
+    const statusCallback = (msg, isActive) => {
+        showNotification(msg);
+        if(isActive) target.classList.add('whisper-active');
+        else target.classList.remove('whisper-active');
+    };
+
+    if (action === 'toggle') {
+        whisper.toggleRecording(target, statusCallback);
+    } else if (action === 'smart_delete') {
+        whisper.smartDelete(target, statusCallback);
+    }
+}
+
+function getPTTTargetElement() {
+    if (isMenuActive) {
+        if (menuRowIndex === 4) return document.getElementById('menu-pers-val');
+        if (menuRowIndex === 8) return document.getElementById('global-rules');
+    } else {
+        return document.getElementById('current-topic');
+    }
+    return null;
+}
+
+document.getElementById('current-topic').addEventListener('keydown', (e) => {
+    if (e.key === 'Delete') {
+        e.preventDefault(); 
+        toggleEngine(); 
+        return;
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        const txt = e.target.value.trim();
+        if (txt) {
+            const hist = JSON.parse(localStorage.getItem(STORAGE_KEYS.INPUT_HISTORY) || "[]");
+            hist.push(txt);
+            localStorage.setItem(STORAGE_KEYS.INPUT_HISTORY, JSON.stringify(hist));
+        }
+    }
+});
+
+function updateStatus(msg) { document.getElementById('model-status').textContent = msg; }
+
+async function initModels() {
+    updateStatus("Modell listák betöltése...");
+    await Promise.allSettled([fetchGroqModels(), fetchPuterModels()]);
+    updateStatus("Kész. Beállítások betöltése...");
+    loadSettings(); 
+    updateStatus("Rendszer kész.");
+}
+
+window.onload = function() {
+    whisper = new WhisperHandler(() => API_KEY_GROQ);
+
+    if (typeof WordTranslator !== 'undefined') {
+        wordTranslator = new WordTranslator('hu');
+    } else {
+        console.error("Hiba: randomtopicgenerator.js nem található!");
+    }
+    loadApiKeys();
+    if(API_KEY_GROQ) {
+        initModels();
+    } else {
+        updateStatus("⚠️ Hiányzó API Key");
+        toggleApiKeyPopup();
+    }
+    initCharacterSelectors();
+    const flowInput = document.getElementById('menu-flowsize-input');
+    if (flowInput) {
+        flowInput.addEventListener('input', (e) => {
+            let val = parseInt(e.target.value);
+            if (!isNaN(val) && val > 0) {
+                flowState.chunkSize = val;
+                saveSettings();
+            }
+        });
+    }
+    let k = ["Szia! Figyelek rátok.","Megjöttem, csapjunk bele!","Itt vagyok, hallgatlak titeket.","Na, mi a helyzet?","Vettem az adást!","Jelen! Kezdhetjük?","Üdv a fedélzeten!","Figyelmem a tiétek."];
+    speakText(k[Math.floor(Math.random()*k.length)]);
+    renderLibraryList();
+    updateFlowControlsUI(); 
+};
+
+document.addEventListener('click', (e) => {
+    if (e.target.id === 'startBtn' && !isRunning) {
+        document.getElementById('current-topic').focus();
+    }
+});
+
+document.getElementById('menu-pers-val').addEventListener('input', (e) => {
+    const curDude = getActiveDudeID();
+    const mainInput = document.getElementById(`${curDude}-style`);
+    if(mainInput) {
+        mainInput.value = e.target.value;
+    }
+    saveSettings();
+});
+
+document.getElementById('global-rules').addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault(); 
+        speakText("Számjegyek nem engedélyezettek a globális szabályokban.");
+    }
+});
+document.getElementById('global-rules').addEventListener('input', saveSettings);
+</script>
+</body>
+</html>
